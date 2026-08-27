@@ -1,0 +1,13 @@
+# Account-level intent data — confidential, not for git
+master_activity.csv
+dashboard.xlsx
+dashboard_data.json
+intent-radar.html
+~$*.xlsx
+
+# Python
+__pycache__/
+*.pyc
+
+# Local tooling config
+.claude/

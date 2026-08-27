@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""
+TrustRadius intent → HCL Unica priority-account dashboard.
+
+Usage:
+    python3 build_dashboard.py [new_export1.csv new_export2.csv ...]
+
+- Any CSV paths passed in are merged into master_activity.csv, deduped by
+  Activity ID (TrustRadius exports are rolling ~30-day windows and overlap
+  week to week, so the same activity shows up in multiple files).
+- With no arguments, it just regenerates dashboard.xlsx from the existing
+  master_activity.csv.
+"""
+import sys
+import re
+import json
+from pathlib import Path
+
+import pandas as pd
+
+import config
+
+BASE_DIR = Path(__file__).parent
+MASTER_PATH = BASE_DIR / "master_activity.csv"
+OUTPUT_PATH = BASE_DIR / "dashboard.xlsx"
+JSON_OUTPUT_PATH = BASE_DIR / "dashboard_data.json"
+
+OBJECT_SLOTS = ["1", "2", "3"]
+
+
+def merge_new_files(new_paths):
+    frames = []
+    if MASTER_PATH.exists():
+        frames.append(pd.read_csv(MASTER_PATH, dtype=str, keep_default_na=False))
+    before_rows = sum(len(f) for f in frames)
+
+    for p in new_paths:
+        df = pd.read_csv(p, dtype=str, keep_default_na=False, encoding="utf-8-sig")
+        frames.append(df)
+
+    if not frames:
+        raise SystemExit("No master_activity.csv yet and no new files given — nothing to build.")
+
+    merged = pd.concat(frames, ignore_index=True)
+    before_dedup = len(merged)
+    merged = merged.drop_duplicates(subset=["Activity ID"], keep="first")
+    after_dedup = len(merged)
+
+    merged.to_csv(MASTER_PATH, index=False)
+    added = after_dedup - before_rows
+    print(f"master_activity.csv: {before_rows} -> {after_dedup} rows "
+          f"({added} new, {before_dedup - after_dedup} duplicate rows discarded this run)")
+    return merged
+
+
+def parse_size_lower_bound(size_str):
+    if not size_str:
+        return None
+    nums = [int(n.replace(",", "")) for n in re.findall(r"[\d,]+", size_str)]
+    return min(nums) if nums else None
+
+
+def parse_revenue(rev_str):
+    if not rev_str:
+        return None
+    try:
+        return float(rev_str.replace(",", ""))
+    except ValueError:
+        return None
+
+
+REVENUE_BANDS = [
+    (100_000_000, "< $100M"),
+    (500_000_000, "$100M - $500M"),
+    (1_000_000_000, "$500M - $1B"),
+    (5_000_000_000, "$1B - $5B"),
+    (10_000_000_000, "$5B - $10B"),
+    (float("inf"), "$10B+"),
+]
+
+
+def revenue_band(revenue):
+    if revenue is None:
+        return "Unknown"
+    for ceiling, label in REVENUE_BANDS:
+        if revenue < ceiling:
+            return label
+    return "$10B+"
+
+
+def is_icp(row):
+    industry = row["Account Industry"].strip()
+    if industry not in config.ICP_INDUSTRIES:
+        return False
+    size_lb = parse_size_lower_bound(row["Account Size"])
+    revenue = parse_revenue(row["Account Annual Revenue"])
+    size_ok = size_lb is not None and size_lb >= config.MIN_EMPLOYEES
+    revenue_ok = revenue is not None and revenue >= config.MIN_REVENUE
+    return size_ok or revenue_ok
+
+
+def build_vendor_index():
+    """vendor -> list of rule dicts, for fast lookup."""
+    idx = {}
+    for rule in config.RULES:
+        idx.setdefault(rule["vendor"], []).append(rule)
+    return idx
+
+
+def classify(vendor, product):
+    """Return (bucket, is_own) or (None, False) if not a tracked vendor at all
+    (caller decides whether it's 'unmapped' vs 'irrelevant')."""
+    rules = VENDOR_INDEX.get(vendor)
+    if not rules:
+        return None, False
+    for rule in rules:
+        if rule["products"] is None or product in rule["products"]:
+            return rule["bucket"], rule.get("own", False)
+    return "UNMAPPED", False
+
+
+VENDOR_INDEX = build_vendor_index()
+TRACKED_VENDORS = set(VENDOR_INDEX.keys())
+
+
+def explode_objects(df):
+    """One row per (activity, object slot) for slots with a non-empty vendor."""
+    records = []
+    account_cols = [
+        "Account Name", "Account Domain", "Account Industry", "Account Size",
+        "Account Annual Revenue", "Account Country",
+    ]
+    for _, row in df.iterrows():
+        for slot in OBJECT_SLOTS:
+            vendor = row.get(f"Object {slot} Vendor", "").strip()
+            if not vendor:
+                continue
+            product = row.get(f"Object {slot} Name", "").strip()
+            category = row.get(f"Object {slot} Category", "").strip()
+            records.append({
+                **{c: row[c] for c in account_cols},
+                "Activity ID": row["Activity ID"],
+                "Activity Date": row["Activity Date"],
+                "Activity Label": row["Activity Label"].strip(),
+                "Vendor": vendor,
+                "Product": product,
+                "Category": category,
+            })
+    return pd.DataFrame.from_records(records)
+
+
+def recency_weight(activity_date, window_start, window_end):
+    span = (window_end - window_start).days
+    if span <= 0:
+        return 1.0
+    day_index = (activity_date - window_start).days
+    return 0.5 + 0.5 * (day_index / span)
+
+
+def score_window(exploded, window_start, window_end):
+    """Per-account: intent_score, activity_count, unica_activity_count,
+    competitor breakdown dict."""
+    mask = (exploded["Activity Date"] >= window_start) & (exploded["Activity Date"] <= window_end)
+    win = exploded.loc[mask & (exploded["bucket"] != "UNMAPPED") & exploded["bucket"].notna()]
+
+    results = {}
+    for account, g in win.groupby("Account Name"):
+        score = 0.0
+        count = 0
+        unica_count = 0
+        competitor_counts = {}
+        labels_seen = set()
+        for _, r in g.iterrows():
+            label_weight = config.LABEL_WEIGHTS.get(r["Activity Label"], config.DEFAULT_LABEL_WEIGHT)
+            mult = config.OWN_PRODUCT_MULTIPLIER if r["is_own"] else config.COMPETITOR_MULTIPLIER
+            rw = recency_weight(r["Activity Date"], window_start, window_end)
+            score += label_weight * mult * rw
+            count += 1
+            labels_seen.add(r["Activity Label"])
+            if r["is_own"]:
+                unica_count += 1
+            else:
+                competitor_counts[r["bucket"]] = competitor_counts.get(r["bucket"], 0) + 1
+        results[account] = {
+            "intent_score": round(score, 1),
+            "activity_count": count,
+            "unica_activity_count": unica_count,
+            "competitor_counts": competitor_counts,
+            "activity_labels": sorted(labels_seen),
+        }
+    return results
+
+
+def category_counts_window(exploded, window_start, window_end):
+    """Per-account category counts across ALL vendors (tracked or not) in the
+    window — this is the broader 'who else is this account researching'
+    market-landscape view, independent of our named-competitor allow-list."""
+    mask = (
+        (exploded["Activity Date"] >= window_start) & (exploded["Activity Date"] <= window_end)
+        & (exploded["Category"] != "")
+    )
+    win = exploded.loc[mask]
+    results = {}
+    for account, g in win.groupby("Account Name"):
+        counts = {}
+        for cat in g["Category"]:
+            counts[cat] = counts.get(cat, 0) + 1
+        results[account] = counts
+    return results
+
+
+def main():
+    new_paths = sys.argv[1:]
+    merged = merge_new_files(new_paths)
+
+    merged["Activity Date"] = pd.to_datetime(merged["Activity Date"], errors="coerce")
+    merged = merged.dropna(subset=["Activity Date"])
+
+    window_end = merged["Activity Date"].max()
+    window_start = window_end - pd.Timedelta(days=config.ROLLING_WINDOW_DAYS - 1)
+    prior_end = window_start - pd.Timedelta(days=1)
+    prior_start = prior_end - pd.Timedelta(days=config.ROLLING_WINDOW_DAYS - 1)
+
+    exploded = explode_objects(merged)
+    exploded["Activity Date"] = pd.to_datetime(exploded["Activity Date"], errors="coerce")
+    exploded = exploded.dropna(subset=["Activity Date"])
+
+    classified = exploded["Vendor"].combine(exploded["Product"], classify)
+    exploded["bucket"] = classified.map(lambda t: t[0])
+    exploded["is_own"] = classified.map(lambda t: t[1])
+
+    # Unmapped known-vendor products, for visibility (not scored).
+    unmapped = (
+        exploded.loc[exploded["bucket"] == "UNMAPPED", ["Vendor", "Product", "Activity Label"]]
+        .value_counts().reset_index(name="Occurrences")
+        .rename(columns={"Activity Label": "Seen With Activity Label"})
+    )
+
+    current = score_window(exploded, window_start, window_end)
+    prior = score_window(exploded, prior_start, prior_end)
+    category_counts = category_counts_window(exploded, window_start, window_end)
+
+    # First/last tracked activity per account, across the entire history in
+    # master_activity.csv (not just the current window) — mapped activity only.
+    mapped_all = exploded.loc[(exploded["bucket"] != "UNMAPPED") & exploded["bucket"].notna()]
+    activity_span = mapped_all.groupby("Account Name")["Activity Date"].agg(["min", "max"])
+
+    # ICP fit per account (dedup account attribute rows from the raw merged df)
+    acct_attrs = merged.drop_duplicates(subset=["Account Name"], keep="last").set_index("Account Name")
+
+    rows = []
+    for account, cur in current.items():
+        if account not in acct_attrs.index:
+            continue
+        attrs = acct_attrs.loc[account]
+        icp_fit = is_icp(attrs)
+        prev = prior.get(account)
+        prev_score = prev["intent_score"] if prev else 0.0
+        if prev is None:
+            trend = "New"
+        elif prev_score == 0:
+            trend = "New" if cur["intent_score"] > 0 else "Flat"
+        else:
+            delta_pct = round((cur["intent_score"] - prev_score) / prev_score * 100)
+            trend = f"{'+' if delta_pct >= 0 else ''}{delta_pct}%"
+
+        competitors_str = "; ".join(
+            f"{b} ({c})" for b, c in sorted(cur["competitor_counts"].items(), key=lambda x: -x[1])
+        )
+        acct_categories = category_counts.get(account, {})
+        categories_str = "; ".join(
+            f"{c} ({n})" for c, n in sorted(acct_categories.items(), key=lambda x: -x[1])
+        )
+        revenue_val = parse_revenue(attrs["Account Annual Revenue"])
+        span = activity_span.loc[account] if account in activity_span.index else None
+        first_activity = span["min"].date().isoformat() if span is not None else None
+        last_activity = span["max"].date().isoformat() if span is not None else None
+        linkedin_id = attrs.get("Account LinkedIn ID", "")
+
+        record = {
+            "First Activity Date": first_activity,
+            "Last Activity Date": last_activity,
+            "Account Name": account,
+            "Account Domain": attrs["Account Domain"],
+            "Account Annual Revenue": attrs["Account Annual Revenue"],
+            "Account Size": attrs["Account Size"],
+            "Account Industry": attrs["Account Industry"],
+            "Account LinkedIn ID": linkedin_id,
+            "Revenue Band": revenue_band(revenue_val),
+            "Country": attrs["Account Country"],
+            "Intent Score": cur["intent_score"],
+            "Activity Count": cur["activity_count"],
+            "Unica Activity Count": cur["unica_activity_count"],
+            "Trend vs Prior {}d".format(config.ROLLING_WINDOW_DAYS): trend,
+            "Activity Labels": ", ".join(cur["activity_labels"]),
+            "Competitors Researched": competitors_str,
+            "Categories Researched": categories_str,
+        }
+        if icp_fit:
+            rows.append(record)
+
+    priority = pd.DataFrame(rows).sort_values("Intent Score", ascending=False)
+
+    # Competitor x Industry x Size rollup (current window, ICP accounts only)
+    icp_accounts = set(priority["Account Name"])
+    roll_mask = (
+        (exploded["Activity Date"] >= window_start) & (exploded["Activity Date"] <= window_end)
+        & exploded["Account Name"].isin(icp_accounts)
+        & (exploded["bucket"] != "UNMAPPED") & exploded["bucket"].notna() & (~exploded["is_own"])
+    )
+    rollup_df = exploded.loc[roll_mask]
+    rollup = (
+        rollup_df.groupby(["bucket", "Account Industry", "Account Size"])
+        .size().reset_index(name="Activity Count")
+        .rename(columns={"bucket": "Competitor", "Account Industry": "Industry", "Account Size": "Size"})
+        .sort_values(["Competitor", "Activity Count"], ascending=[True, False])
+    )
+
+    run_info = pd.DataFrame([{
+        "Master rows (deduped)": len(merged),
+        "Window start": window_start.date(),
+        "Window end": window_end.date(),
+        "Prior window start": prior_start.date(),
+        "Prior window end": prior_end.date(),
+        "ICP-fit accounts": len(priority),
+        "Unmapped product rows": len(unmapped),
+    }])
+
+    with pd.ExcelWriter(OUTPUT_PATH, engine="openpyxl") as writer:
+        priority.to_excel(writer, sheet_name="Priority Accounts", index=False)
+        rollup.to_excel(writer, sheet_name="Competitor x Industry x Size", index=False)
+        unmapped.to_excel(writer, sheet_name="Unmapped Products", index=False)
+        run_info.to_excel(writer, sheet_name="Run Info", index=False)
+
+    # ---------- Event-level export for the interactive dashboard ----------
+    # The dashboard lets the user pick an arbitrary date range client-side,
+    # so instead of shipping one precomputed window we ship compact raw
+    # events and per-account static attributes; the page recomputes
+    # scores/counts/trends itself for whatever range is selected.
+    tracked_mask = (exploded["bucket"] != "UNMAPPED") & exploded["bucket"].notna()
+    accounts_all_time = sorted(set(exploded.loc[tracked_mask, "Account Name"]))
+    account_index = {a: i for i, a in enumerate(accounts_all_time)}
+
+    account_records = []
+    for account in accounts_all_time:
+        attrs = acct_attrs.loc[account]
+        revenue_val = parse_revenue(attrs["Account Annual Revenue"])
+        account_records.append({
+            "account": account,
+            "domain": attrs["Account Domain"],
+            "industry": attrs["Account Industry"],
+            "size": attrs["Account Size"],
+            "revenue": revenue_val,
+            "revenueBand": revenue_band(revenue_val),
+            "linkedinId": attrs.get("Account LinkedIn ID", ""),
+            "country": attrs["Account Country"],
+            "icpFit": is_icp(attrs),
+        })
+
+    # All activity (any vendor, tracked or not) for these accounts — needed
+    # so "researching category" can see the full competitive landscape, not
+    # just our named-competitor allow-list.
+    event_exploded = exploded[exploded["Account Name"].isin(account_index)]
+
+    competitor_buckets = sorted({
+        b for b in event_exploded.loc[tracked_mask, "bucket"].unique()
+        if b and b != "HCL Unica (Own)"
+    })
+    bucket_index = {b: i for i, b in enumerate(competitor_buckets)}
+    category_list = sorted({c for c in event_exploded["Category"] if c})
+    category_index = {c: i for i, c in enumerate(category_list)}
+    label_list = sorted(set(event_exploded["Activity Label"]))
+    label_index = {l: i for i, l in enumerate(label_list)}
+
+    events = []
+    for _, r in event_exploded.iterrows():
+        bucket = r["bucket"]
+        category = r["Category"]
+        events.append([
+            account_index[r["Account Name"]],
+            r["Activity Date"].date().isoformat(),
+            1 if r["is_own"] else 0,
+            bucket_index.get(bucket, -1),
+            category_index.get(category, -1) if category else -1,
+            label_index[r["Activity Label"]],
+        ])
+
+    payload = {
+        "dataStart": str(merged["Activity Date"].min().date()),
+        "dataEnd": str(merged["Activity Date"].max().date()),
+        "icpCriteria": {
+            "industries": sorted(config.ICP_INDUSTRIES),
+            "minEmployees": config.MIN_EMPLOYEES,
+            "minRevenue": config.MIN_REVENUE,
+        },
+        "labelWeights": config.LABEL_WEIGHTS,
+        "defaultLabelWeight": config.DEFAULT_LABEL_WEIGHT,
+        "ownMultiplier": config.OWN_PRODUCT_MULTIPLIER,
+        "competitorMultiplier": config.COMPETITOR_MULTIPLIER,
+        "competitorBuckets": competitor_buckets,
+        "categoryList": category_list,
+        "labelList": label_list,
+        "accounts": account_records,
+        "events": events,
+    }
+    JSON_OUTPUT_PATH.write_text(json.dumps(payload, default=str))
+
+    print(f"Wrote {OUTPUT_PATH.name}: {len(priority)} ICP-fit accounts, "
+          f"window {window_start.date()}..{window_end.date()}, "
+          f"{len(unmapped)} unmapped product rows to review")
+    print(f"Wrote {JSON_OUTPUT_PATH.name}: {len(account_records)} accounts, {len(events)} events, "
+          f"data span {payload['dataStart']}..{payload['dataEnd']}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,1152 @@
+<meta charset="UTF-8">
+<title>Intent Radar</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F7F7FC;
+    --surface: #FFFFFF;
+    --surface-alt: #ECF3F8;
+    --surface-sunken: #F4F4F4;
+    --border: #DCE6F0;
+    --text-primary: #14142B;
+    --text-secondary: #5C6B74;
+    --text-muted: #8A97A0;
+    --accent: #17707F;
+    --accent-bright: #2EC0CB;
+    --accent-deep: #000032;
+    --on-accent: #FFFFFF;
+    --ramp-1: #ECF3F8;
+    --ramp-2: #AAFFFF;
+    --ramp-3: #36D6D9;
+    --ramp-4: #2EC0CB;
+    --ramp-5: #17707F;
+    --good: #0E9AA3;
+    --warning: #B9770E;
+    --critical: #C23B4B;
+    --new: #2F6FE0;
+    --focus-ring: #0F5FDC;
+    --shadow: 0 1px 2px rgba(20, 20, 43, 0.06), 0 8px 24px rgba(20, 20, 43, 0.06);
+    --header-gradient: linear-gradient(135deg, #0B1D3A 0%, #17707F 45%, #2EC0CB 85%, #36D6D9 100%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0B1626;
+      --surface: #101F35;
+      --surface-alt: #142A46;
+      --surface-sunken: #0E1A2C;
+      --border: #22405F;
+      --text-primary: #EEF3F8;
+      --text-secondary: #9FB3C4;
+      --text-muted: #6E8296;
+      --accent: #36D6D9;
+      --accent-bright: #AAFFFF;
+      --accent-deep: #8AC6F8;
+      --on-accent: #04141A;
+      --ramp-1: #142A46;
+      --ramp-2: #17707F;
+      --ramp-3: #2EC0CB;
+      --ramp-4: #36D6D9;
+      --ramp-5: #AAFFFF;
+      --good: #36D6D9;
+      --warning: #E8A93B;
+      --critical: #FF8A93;
+      --new: #8AC6F8;
+      --focus-ring: #8AC6F8;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+      --header-gradient: linear-gradient(135deg, #060E1C 0%, #0F3F49 45%, #17707F 85%, #1E8B96 100%);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0B1626;
+    --surface: #101F35;
+    --surface-alt: #142A46;
+    --surface-sunken: #0E1A2C;
+    --border: #22405F;
+    --text-primary: #EEF3F8;
+    --text-secondary: #9FB3C4;
+    --text-muted: #6E8296;
+    --accent: #36D6D9;
+    --accent-bright: #AAFFFF;
+    --accent-deep: #8AC6F8;
+    --on-accent: #04141A;
+    --ramp-1: #142A46;
+    --ramp-2: #17707F;
+    --ramp-3: #2EC0CB;
+    --ramp-4: #36D6D9;
+    --ramp-5: #AAFFFF;
+    --good: #36D6D9;
+    --warning: #E8A93B;
+    --critical: #FF8A93;
+    --new: #8AC6F8;
+    --focus-ring: #8AC6F8;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --header-gradient: linear-gradient(135deg, #060E1C 0%, #0F3F49 45%, #17707F 85%, #1E8B96 100%);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  button { font-family: inherit; }
+
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ---------- header ---------- */
+  .hero {
+    background: var(--header-gradient);
+    color: #FFFFFF;
+    padding: 22px 28px 26px;
+  }
+  .hero-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .hero-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(255,255,255,0.72); margin: 0 0 4px;
+  }
+  .hero h1 { font-size: 1.7rem; font-weight: 700; color: #fff; }
+  .hero-sub { color: rgba(255,255,255,0.8); font-size: 0.85rem; margin-top: 4px; }
+  .theme-toggle {
+    background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.3); color: #fff;
+    border-radius: 999px; padding: 7px 14px; font-size: 0.8rem; cursor: pointer; white-space: nowrap;
+  }
+  .theme-toggle:hover { background: rgba(255,255,255,0.24); }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 12px; margin-top: 20px; }
+  .kpi {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.22); border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .kpi-label { font-size: 0.72rem; color: rgba(255,255,255,0.72); text-transform: uppercase; letter-spacing: 0.06em; }
+  .kpi-value { font-size: 1.5rem; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .kpi-sub { font-size: 0.75rem; color: rgba(255,255,255,0.68); margin-top: 2px; }
+
+  /* ---------- body ---------- */
+  .main { flex: 1; padding: 20px 28px 40px; display: flex; flex-direction: column; gap: 18px; max-width: 1440px; width: 100%; margin: 0 auto; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+
+  /* filters */
+  .date-range-bar { padding: 12px 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .range-presets { display: inline-flex; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: 10px; padding: 3px; gap: 2px; }
+  .range-pill { border: none; background: transparent; color: var(--text-secondary); font-size: 0.82rem; font-weight: 600; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .range-pill:hover { color: var(--text-primary); }
+  .range-pill.active { background: var(--surface); color: var(--text-primary); box-shadow: var(--shadow); }
+  .range-icon { color: var(--text-muted); font-size: 0.95rem; }
+  .date-range-bar input[type="date"] {
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 0.82rem;
+    background: var(--surface); color: var(--text-primary); font-variant-numeric: tabular-nums;
+  }
+  .range-to { color: var(--text-muted); font-size: 0.8rem; }
+  #dataAvailabilityHint { margin-left: auto; }
+
+  .filters { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field label { font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .field input[type="text"], .field input[type="search"] {
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem;
+    background: var(--surface); color: var(--text-primary); min-width: 190px;
+  }
+  .multiselect { position: relative; }
+  .multiselect-btn {
+    border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 0.85rem;
+    background: var(--surface); color: var(--text-primary); cursor: pointer; min-width: 170px; text-align: left;
+    display: flex; justify-content: space-between; gap: 8px; align-items: center;
+  }
+  .multiselect-btn .count-badge {
+    background: var(--accent); color: var(--on-accent); border-radius: 999px; font-size: 0.68rem; padding: 1px 7px; font-weight: 700;
+  }
+  .multiselect-panel {
+    position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); padding: 8px;
+    min-width: 240px; max-height: 320px; overflow-y: auto; display: none;
+  }
+  .multiselect.open .multiselect-panel { display: block; }
+  .ms-search {
+    display: block; width: 100%; box-sizing: border-box; margin-bottom: 6px; position: sticky; top: 0;
+    border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; font-size: 0.8rem;
+    background: var(--surface); color: var(--text-primary);
+  }
+  .ms-option { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; }
+  .ms-option:hover { background: var(--surface-alt); }
+  .ms-option input { accent-color: var(--accent); }
+  .ms-count { color: var(--text-muted); font-size: 0.75rem; margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  .toggle-field { display: flex; align-items: center; gap: 8px; }
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; cursor: pointer; }
+  .switch .track { position: absolute; inset: 0; background: var(--border); border-radius: 999px; transition: background 0.15s; }
+  .switch .thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: transform 0.15s; }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track + .thumb { transform: translateX(16px); }
+  .toggle-label { font-size: 0.82rem; color: var(--text-primary); font-weight: 600; }
+
+  .field.slider { min-width: 170px; }
+  .slider-row { display: flex; align-items: center; gap: 8px; }
+  .slider-row input[type="range"] { accent-color: var(--accent); flex: 1; }
+  .slider-value { font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); min-width: 28px; text-align: right; }
+
+  .reset-link {
+    background: none; border: none; color: var(--accent); font-size: 0.82rem; cursor: pointer; font-weight: 700;
+    padding: 7px 4px; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .filter-summary { padding: 0 16px 12px; font-size: 0.78rem; color: var(--text-secondary); }
+  .filter-summary strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  /* layout grid: table + side panel */
+  .grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel-head { padding: 14px 16px 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .panel-head h2 { font-size: 1rem; font-weight: 700; }
+  .panel-head .hint { font-size: 0.76rem; color: var(--text-muted); }
+
+  .table-wrap { overflow-x: auto; padding: 10px 16px 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; min-width: 760px; }
+  thead th {
+    text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary);
+    padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface);
+    cursor: pointer; white-space: nowrap; user-select: none;
+  }
+  thead th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  thead th .arrow { opacity: 0.4; margin-left: 3px; }
+  thead th.sorted .arrow { opacity: 1; color: var(--accent); }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:hover { background: var(--surface-alt); }
+  .acct-name { font-weight: 700; color: var(--text-primary); }
+  .acct-domain { color: var(--text-muted); font-size: 0.76rem; }
+
+  .pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 9px; font-size: 0.72rem; font-weight: 700; white-space: nowrap; }
+  .pill-icp { background: rgba(23,112,127,0.12); color: var(--accent); border: 1px solid rgba(23,112,127,0.3); }
+  .pill-trend-up { background: rgba(14,154,163,0.14); color: var(--good); }
+  .pill-trend-down { background: rgba(194,59,75,0.13); color: var(--critical); }
+  .pill-trend-new { background: rgba(47,111,224,0.13); color: var(--new); }
+  .pill-trend-flat { background: var(--surface-sunken); color: var(--text-muted); }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 4px; max-width: 320px; }
+  .chip { background: var(--surface-alt); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 2px 7px; font-size: 0.72rem; white-space: nowrap; }
+  .chip b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .chip.unica { background: rgba(23,112,127,0.12); color: var(--accent); border-color: rgba(23,112,127,0.32); font-weight: 700; }
+
+  .score-cell { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .empty-state { padding: 40px 16px; text-align: center; color: var(--text-muted); font-size: 0.88rem; }
+
+  .pagination { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 16px; font-size: 0.8rem; color: var(--text-secondary); gap: 10px; flex-wrap: wrap; }
+  .pagination button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-primary); border-radius: 7px;
+    padding: 5px 10px; cursor: pointer; font-size: 0.8rem;
+  }
+  .pagination button:disabled { opacity: 0.4; cursor: default; }
+  .pagination button:not(:disabled):hover { background: var(--surface-alt); }
+
+  /* side panels: bar chart + heatmap */
+  .side-stack { display: flex; flex-direction: column; gap: 18px; }
+  .bar-list { display: flex; flex-direction: column; gap: 9px; padding: 4px 16px 16px; }
+  .bar-row { display: grid; grid-template-columns: 130px 1fr 46px; align-items: center; gap: 8px; font-size: 0.78rem; }
+  .bar-row .bar-label { color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row .bar-label.own { color: var(--accent); font-weight: 700; }
+  .bar-track { background: var(--surface-sunken); border-radius: 5px; height: 14px; position: relative; overflow: hidden; }
+  .bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--ramp-5); border-radius: 5px; }
+  .bar-fill.own { background: var(--accent-bright); }
+  .bar-row .bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+
+  .details-toggle { font-size: 0.76rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0 16px 12px; text-decoration: underline; text-underline-offset: 2px; }
+
+  .heat-wrap { overflow-x: auto; padding: 4px 16px 16px; }
+  .heat-table { border-collapse: collapse; font-size: 0.76rem; min-width: 100%; }
+  .heat-table th, .heat-table td { padding: 6px 8px; text-align: center; border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  .heat-table th.row-head { text-align: left; font-weight: 600; color: var(--text-primary); background: var(--surface); position: sticky; left: 0; }
+  .heat-table thead th { background: var(--surface); color: var(--text-secondary); font-weight: 700; font-size: 0.68rem; text-transform: uppercase; }
+  .heat-cell { color: var(--text-primary); }
+
+  footer { padding: 16px 28px 32px; color: var(--text-muted); font-size: 0.76rem; max-width: 1440px; margin: 0 auto; width: 100%; }
+  footer code { background: var(--surface-alt); border-radius: 4px; padding: 1px 5px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="app">
+  <header class="hero">
+    <div class="hero-row">
+      <div>
+        <p class="hero-eyebrow">HCL Unica &middot; TrustRadius account intelligence</p>
+        <h1>Intent Radar</h1>
+        <p class="hero-sub" id="heroWindow">Loading window&hellip;</p>
+      </div>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">&#9789; Theme</button>
+    </div>
+    <div class="kpi-row" id="kpiRow"></div>
+  </header>
+
+  <main class="main">
+    <section class="panel date-range-bar" id="dateRangeBar">
+      <div class="range-presets" role="group" aria-label="Date range preset">
+        <button type="button" class="range-pill" data-preset="7">Last 7 days</button>
+        <button type="button" class="range-pill" data-preset="30">Last 30 days</button>
+        <button type="button" class="range-pill" data-preset="90">Last 90 days</button>
+        <button type="button" class="range-pill" data-preset="all">All time</button>
+      </div>
+      <span class="range-icon" aria-hidden="true">&#128197;</span>
+      <input type="date" id="rangeFromInput" aria-label="Range start" />
+      <span class="range-to">to</span>
+      <input type="date" id="rangeToInput" aria-label="Range end" />
+      <span class="hint" id="dataAvailabilityHint"></span>
+    </section>
+
+    <section class="panel filters" id="filterPanel">
+      <div class="field">
+        <label for="searchInput">Search account</label>
+        <input type="search" id="searchInput" placeholder="Company or domain&hellip;" />
+      </div>
+
+      <div class="field">
+        <label>Industry</label>
+        <div class="multiselect" data-key="industry">
+          <button type="button" class="multiselect-btn"><span class="ms-label">All industries</span></button>
+          <div class="multiselect-panel"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Company size</label>
+        <div class="multiselect" data-key="size">
+          <button type="button" class="multiselect-btn"><span class="ms-label">All sizes</span></button>
+          <div class="multiselect-panel"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Researching product</label>
+        <div class="multiselect" data-key="competitor">
+          <button type="button" class="multiselect-btn"><span class="ms-label">Any product</span></button>
+          <div class="multiselect-panel"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Researching category</label>
+        <div class="multiselect" data-key="category">
+          <button type="button" class="multiselect-btn"><span class="ms-label">Any category</span></button>
+          <div class="multiselect-panel"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Country</label>
+        <div class="multiselect" data-key="country">
+          <button type="button" class="multiselect-btn"><span class="ms-label">All countries</span></button>
+          <div class="multiselect-panel"></div>
+        </div>
+      </div>
+
+      <div class="field slider">
+        <label for="scoreSlider">Min intent score</label>
+        <div class="slider-row">
+          <input type="range" id="scoreSlider" min="0" max="200" value="0" step="1" />
+          <span class="slider-value" id="scoreSliderValue">0</span>
+        </div>
+      </div>
+
+      <div class="field toggle-field" style="padding-bottom:6px;">
+        <label class="switch">
+          <input type="checkbox" id="icpToggle" checked />
+          <span class="track"></span>
+          <span class="thumb"></span>
+        </label>
+        <span class="toggle-label">ICP fit only</span>
+      </div>
+
+      <div class="field toggle-field" style="padding-bottom:6px;">
+        <label class="switch">
+          <input type="checkbox" id="newToggle" />
+          <span class="track"></span>
+          <span class="thumb"></span>
+        </label>
+        <span class="toggle-label">New in period</span>
+      </div>
+
+      <button class="reset-link" id="resetFilters" type="button">Reset filters</button>
+    </section>
+    <p class="filter-summary" id="filterSummary"></p>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Priority accounts</h2>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span class="hint" id="tableHint"></span>
+            <button class="reset-link" id="downloadCsv" type="button" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px;">&#8681; Download CSV</button>
+          </div>
+        </div>
+        <p class="hint" id="downloadStatus" style="padding:0 16px; min-height: 1em;"></p>
+        <div class="table-wrap">
+          <table id="acctTable">
+            <thead>
+              <tr>
+                <th data-sort="account">Account <span class="arrow">&#9662;</span></th>
+                <th data-sort="industry">Industry <span class="arrow">&#9662;</span></th>
+                <th data-sort="size">Size <span class="arrow">&#9662;</span></th>
+                <th class="num" data-sort="intentScore">Intent score <span class="arrow">&#9662;</span></th>
+                <th class="num" data-sort="activityCount">Activity <span class="arrow">&#9662;</span></th>
+                <th class="num" data-sort="unicaCount">Unica views <span class="arrow">&#9662;</span></th>
+                <th data-sort="trend">Trend <span class="arrow">&#9662;</span></th>
+                <th>Researching</th>
+              </tr>
+            </thead>
+            <tbody id="acctTbody"></tbody>
+          </table>
+          <div class="empty-state" id="emptyState" style="display:none;">No accounts match these filters. Try widening them.</div>
+        </div>
+        <div class="pagination">
+          <span id="pageInfo"></span>
+          <div>
+            <button id="prevPage" type="button">&larr; Prev</button>
+            <button id="nextPage" type="button">Next &rarr;</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="side-stack">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Research volume by product</h2>
+            <span class="hint" id="barHint">filtered set</span>
+          </div>
+          <div class="bar-list" id="barList"></div>
+          <button class="details-toggle" id="toggleBarTable" type="button">View as table</button>
+          <div class="table-wrap" id="barTableWrap" style="display:none;">
+            <table id="barTable"><thead><tr><th>Product</th><th class="num">Accounts researching</th></tr></thead><tbody></tbody></table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Industry &times; product</h2>
+            <span class="hint" id="heatHint">accounts researching, filtered set</span>
+          </div>
+          <div class="heat-wrap" id="heatWrap"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p id="dataCoverage" style="margin:0 0 6px;"></p>
+    ICP filter: industries <code id="ficIndustries"></code>, size &ge; <code id="ficSize"></code> employees OR revenue &ge; <code id="ficRevenue"></code>, geography global.
+    Scores are a weighted <span id="ficWindowDays"></span>-day rolling intent measure (activity type &times; recency &times; a higher weight for HCL Unica research vs. competitor research); &ldquo;Activity&rdquo; is the raw count of qualifying page views. &ldquo;Researching category&rdquo; covers every product category the account viewed on TrustRadius, not just our named competitor list.
+  </footer>
+</div>
+
+<script id="dashboard-data" type="application/json">__DASHBOARD_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var payload = JSON.parse(document.getElementById("dashboard-data").textContent);
+  var accountMeta = payload.accounts;
+  var accounts = []; // recomputed for the selected date range — see computeAccountsForRange()
+  var DAY_MS = 86400000;
+  var dataStartMs = Date.parse(payload.dataStart);
+  var dataEndMs = Date.parse(payload.dataEnd);
+
+  // ---------- build per-account event index (once) ----------
+  var eventsByAccount = accountMeta.map(function () { return []; });
+  var firstActivityMs = new Array(accountMeta.length).fill(null);
+  var lastActivityMs = new Array(accountMeta.length).fill(null);
+  payload.events.forEach(function (ev) {
+    var acctIdx = ev[0], ms = Date.parse(ev[1]), isOwn = !!ev[2], bucketIdx = ev[3], catIdx = ev[4], labelIdx = ev[5];
+    eventsByAccount[acctIdx].push({ ms: ms, isOwn: isOwn, bucketIdx: bucketIdx, catIdx: catIdx, labelIdx: labelIdx });
+    if (firstActivityMs[acctIdx] === null || ms < firstActivityMs[acctIdx]) firstActivityMs[acctIdx] = ms;
+    if (lastActivityMs[acctIdx] === null || ms > lastActivityMs[acctIdx]) lastActivityMs[acctIdx] = ms;
+  });
+
+  function isoDate(ms) {
+    return ms === null ? null : new Date(ms).toISOString().slice(0, 10);
+  }
+
+  function recencyWeight(ms, startMs, endMs) {
+    var spanDays = Math.round((endMs - startMs) / DAY_MS);
+    if (spanDays <= 0) return 1.0;
+    var dayIndex = Math.round((ms - startMs) / DAY_MS);
+    return 0.5 + 0.5 * (dayIndex / spanDays);
+  }
+
+  // Aggregate one account's events into the score_window()-equivalent
+  // summary the rest of the page consumes. Mirrors build_dashboard.py.
+  function summarizeAccount(events, startMs, endMs) {
+    var score = 0, count = 0, unicaCount = 0;
+    var competitorCounts = {}, categoryCounts = {}, labelsSeen = {};
+    events.forEach(function (e) {
+      if (e.ms < startMs || e.ms > endMs) return;
+      var qualifies = e.isOwn || e.bucketIdx >= 0;
+      if (qualifies) {
+        var labelName = payload.labelList[e.labelIdx];
+        var labelWeight = payload.labelWeights[labelName] || payload.defaultLabelWeight;
+        var mult = e.isOwn ? payload.ownMultiplier : payload.competitorMultiplier;
+        score += labelWeight * mult * recencyWeight(e.ms, startMs, endMs);
+        count++;
+        labelsSeen[labelName] = true;
+        if (e.isOwn) unicaCount++;
+        else {
+          var bName = payload.competitorBuckets[e.bucketIdx];
+          competitorCounts[bName] = (competitorCounts[bName] || 0) + 1;
+        }
+      }
+      if (e.catIdx >= 0) {
+        var cName = payload.categoryList[e.catIdx];
+        categoryCounts[cName] = (categoryCounts[cName] || 0) + 1;
+      }
+    });
+    return {
+      score: Math.round(score * 10) / 10,
+      count: count,
+      unicaCount: unicaCount,
+      competitors: competitorCounts,
+      categories: categoryCounts,
+      labels: Object.keys(labelsSeen)
+    };
+  }
+
+  function computeAccountsForRange(startMs, endMs) {
+    var rangeLen = endMs - startMs;
+    var priorEndMs = startMs - DAY_MS;
+    var priorStartMs = priorEndMs - rangeLen;
+    var havePriorData = priorEndMs >= dataStartMs;
+    var out = [];
+    for (var i = 0; i < accountMeta.length; i++) {
+      var summary = summarizeAccount(eventsByAccount[i], startMs, endMs);
+      if (summary.count === 0) continue;
+      var meta = accountMeta[i];
+      var trend;
+      if (!havePriorData) {
+        trend = "—";
+      } else {
+        var prior = summarizeAccount(eventsByAccount[i], priorStartMs, priorEndMs);
+        if (prior.score === 0) trend = summary.score > 0 ? "New" : "Flat";
+        else {
+          var deltaPct = Math.round((summary.score - prior.score) / prior.score * 100);
+          trend = (deltaPct >= 0 ? "+" : "") + deltaPct + "%";
+        }
+      }
+      var isNewInRange = firstActivityMs[i] >= startMs && firstActivityMs[i] <= endMs;
+      out.push({
+        account: meta.account,
+        domain: meta.domain,
+        industry: meta.industry,
+        size: meta.size,
+        revenue: meta.revenue,
+        revenueBand: meta.revenueBand,
+        linkedinId: meta.linkedinId,
+        country: meta.country,
+        icpFit: meta.icpFit,
+        intentScore: summary.score,
+        activityCount: summary.count,
+        unicaCount: summary.unicaCount,
+        trend: trend,
+        isNewInRange: isNewInRange,
+        firstActivityDate: isoDate(firstActivityMs[i]),
+        lastActivityDate: isoDate(lastActivityMs[i]),
+        activityLabels: summary.labels,
+        competitors: summary.competitors,
+        categories: summary.categories
+      });
+    }
+    out.sort(function (a, b) { return b.intentScore - a.intentScore; });
+    return out;
+  }
+
+  // ---------- theme ----------
+  var root = document.documentElement;
+  function loadTheme() {
+    try { return localStorage.getItem("intent-radar-theme"); } catch (e) { return null; }
+  }
+  function saveTheme(v) {
+    try { localStorage.setItem("intent-radar-theme", v); } catch (e) {}
+  }
+  var storedTheme = loadTheme();
+  if (storedTheme === "light" || storedTheme === "dark") root.setAttribute("data-theme", storedTheme);
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var current = root.getAttribute("data-theme");
+    var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var effectiveDark = current === "dark" || (!current && prefersDark);
+    var next = effectiveDark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    saveTheme(next);
+  });
+
+  // ---------- header (static parts) ----------
+  document.getElementById("ficIndustries").textContent = payload.icpCriteria.industries.join(", ");
+  document.getElementById("ficSize").textContent = payload.icpCriteria.minEmployees.toLocaleString();
+  document.getElementById("ficRevenue").textContent = "$" + Math.round(payload.icpCriteria.minRevenue / 1e6) + "M";
+  document.getElementById("dataCoverage").textContent =
+    "Full upload history: " + payload.dataStart + " → " + payload.dataEnd + ". Pick any date range above — presets are relative to the most recent upload.";
+
+  var PRESET_LABELS = { "7": "Last 7 days", "30": "Last 30 days", "90": "Last 90 days", "all": "All time" };
+
+  function updateHeaderText() {
+    var rangeDays = Math.round((state.rangeEnd - state.rangeStart) / DAY_MS) + 1;
+    var label = state.activePreset && PRESET_LABELS[state.activePreset] ? PRESET_LABELS[state.activePreset] : "Custom range";
+    document.getElementById("heroWindow").textContent =
+      label + ": " + isoDate(state.rangeStart) + " → " + isoDate(state.rangeEnd) +
+      " · " + accounts.length.toLocaleString() + " accounts with tracked activity";
+    document.getElementById("barHint").textContent = "filtered set · " + isoDate(state.rangeStart) + " → " + isoDate(state.rangeEnd);
+    document.getElementById("heatHint").textContent = "accounts researching, filtered set · " + isoDate(state.rangeStart) + " → " + isoDate(state.rangeEnd);
+    document.getElementById("ficWindowDays").textContent = rangeDays;
+    return rangeDays;
+  }
+
+  // ---------- helpers ----------
+  function fmtRevenue(v) {
+    if (v === null || v === undefined) return "—";
+    if (v >= 1e9) return "$" + (v / 1e9).toFixed(1) + "B";
+    if (v >= 1e6) return "$" + (v / 1e6).toFixed(0) + "M";
+    return "$" + v.toLocaleString();
+  }
+  function trendClass(t) {
+    if (t === "New") return "pill-trend-new";
+    if (t === "Flat") return "pill-trend-flat";
+    if (t.charAt(0) === "-") return "pill-trend-down";
+    return "pill-trend-up";
+  }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  var industries = Array.from(new Set(accountMeta.map(function (a) { return a.industry; }).filter(Boolean))).sort();
+  var sizes = Array.from(new Set(accountMeta.map(function (a) { return a.size; }).filter(Boolean)));
+  var sizeOrder = ["1 to 10", "10 to 50", "50 to 250", "250 to 500", "500 to 1,000", "1,000 to 5,000", "5,000 to 10,000", "10,000+"];
+  sizes.sort(function (a, b) { return sizeOrder.indexOf(a) - sizeOrder.indexOf(b); });
+  var competitorBuckets = payload.competitorBuckets.slice().sort();
+  var UNICA_LABEL = "HCL Unica (Own)";
+  var researchOptions = [UNICA_LABEL].concat(competitorBuckets);
+  var countries = Array.from(new Set(accountMeta.map(function (a) { return a.country; }).filter(Boolean))).sort();
+  var categoryListSorted = payload.categoryList.slice().sort();
+
+  var scoreSliderEl = document.getElementById("scoreSlider");
+
+  // ---------- filter state ----------
+  var state = {
+    search: "",
+    industry: new Set(),
+    size: new Set(),
+    competitor: new Set(),
+    category: new Set(),
+    country: new Set(),
+    icpOnly: true,
+    newOnly: false,
+    minScore: 0,
+    sortKey: "intentScore",
+    sortDir: -1,
+    page: 1,
+    pageSize: 50,
+    rangeStart: dataEndMs - 29 * DAY_MS,
+    rangeEnd: dataEndMs,
+    activePreset: "30"
+  };
+  if (state.rangeStart < dataStartMs) state.rangeStart = dataStartMs;
+
+  // ---------- date range controls ----------
+  var fromInput = document.getElementById("rangeFromInput");
+  var toInput = document.getElementById("rangeToInput");
+  fromInput.min = toInput.min = payload.dataStart;
+  fromInput.max = toInput.max = payload.dataEnd;
+  document.getElementById("dataAvailabilityHint").textContent = "Data available " + payload.dataStart + " – " + payload.dataEnd;
+
+  function syncRangeInputs() {
+    fromInput.value = isoDate(state.rangeStart);
+    toInput.value = isoDate(state.rangeEnd);
+    document.querySelectorAll(".range-pill").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.preset === state.activePreset);
+    });
+  }
+
+  document.querySelectorAll(".range-pill").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var preset = btn.dataset.preset;
+      state.activePreset = preset;
+      state.rangeEnd = dataEndMs;
+      if (preset === "all") state.rangeStart = dataStartMs;
+      else state.rangeStart = Math.max(dataStartMs, dataEndMs - (Number(preset) - 1) * DAY_MS);
+      state.page = 1;
+      syncRangeInputs();
+      render();
+    });
+  });
+  fromInput.addEventListener("change", function () {
+    var ms = Date.parse(fromInput.value);
+    if (isNaN(ms)) return;
+    state.rangeStart = Math.max(dataStartMs, ms);
+    if (state.rangeStart > state.rangeEnd) state.rangeEnd = state.rangeStart;
+    state.activePreset = null;
+    state.page = 1;
+    syncRangeInputs();
+    render();
+  });
+  toInput.addEventListener("change", function () {
+    var ms = Date.parse(toInput.value);
+    if (isNaN(ms)) return;
+    state.rangeEnd = Math.min(dataEndMs, ms);
+    if (state.rangeEnd < state.rangeStart) state.rangeStart = state.rangeEnd;
+    state.activePreset = null;
+    state.page = 1;
+    syncRangeInputs();
+    render();
+  });
+  syncRangeInputs();
+
+  function buildMultiselect(container, key, options) {
+    var panel = container.querySelector(".multiselect-panel");
+    var btn = container.querySelector(".multiselect-btn");
+    panel.innerHTML = "";
+
+    var searchBox = null;
+    if (options.length > 12) {
+      searchBox = document.createElement("input");
+      searchBox.type = "text";
+      searchBox.className = "ms-search";
+      searchBox.placeholder = "Filter…";
+      searchBox.addEventListener("click", function (e) { e.stopPropagation(); });
+      searchBox.addEventListener("input", function () {
+        var q = searchBox.value.trim().toLowerCase();
+        panel.querySelectorAll(".ms-option").forEach(function (row) {
+          row.style.display = row.dataset.opt.toLowerCase().indexOf(q) > -1 ? "" : "none";
+        });
+      });
+      panel.appendChild(searchBox);
+    }
+
+    options.forEach(function (opt) {
+      var row = document.createElement("label");
+      row.className = "ms-option";
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = opt;
+      cb.addEventListener("change", function () {
+        if (cb.checked) state[key].add(opt); else state[key].delete(opt);
+        state.page = 1;
+        updateMultiselectLabel(container, key);
+        render();
+      });
+      var span = document.createElement("span");
+      span.textContent = opt;
+      var count = document.createElement("span");
+      count.className = "ms-count";
+      row.appendChild(cb); row.appendChild(span); row.appendChild(count);
+      row.dataset.opt = opt;
+      panel.appendChild(row);
+    });
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      document.querySelectorAll(".multiselect.open").forEach(function (el) { if (el !== container) el.classList.remove("open"); });
+      container.classList.toggle("open");
+      if (container.classList.contains("open") && searchBox) searchBox.focus();
+    });
+  }
+  document.addEventListener("click", function (e) {
+    document.querySelectorAll(".multiselect.open").forEach(function (el) {
+      if (!el.contains(e.target)) el.classList.remove("open");
+    });
+  });
+
+  function updateMultiselectLabel(container, key, total) {
+    var btn = container.querySelector(".multiselect-btn");
+    var label = btn.querySelector(".ms-label");
+    var n = state[key].size;
+    var placeholderMap = { industry: "All industries", size: "All sizes", competitor: "Any product", category: "Any category", country: "All countries" };
+    if (n === 0) {
+      label.textContent = placeholderMap[key];
+      var badge = btn.querySelector(".count-badge");
+      if (badge) badge.remove();
+    } else {
+      label.textContent = n + " selected";
+      var badge = btn.querySelector(".count-badge");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "count-badge";
+        btn.appendChild(badge);
+      }
+      badge.textContent = n;
+    }
+  }
+
+  document.querySelectorAll(".multiselect").forEach(function (el) {
+    var key = el.dataset.key;
+    var opts = key === "industry" ? industries : key === "size" ? sizes : key === "country" ? countries : key === "category" ? categoryListSorted : researchOptions;
+    buildMultiselect(el, key, opts, null);
+  });
+
+  document.getElementById("searchInput").addEventListener("input", function (e) {
+    state.search = e.target.value.trim().toLowerCase();
+    state.page = 1;
+    render();
+  });
+  document.getElementById("icpToggle").addEventListener("change", function (e) {
+    state.icpOnly = e.target.checked;
+    state.page = 1;
+    render();
+  });
+  document.getElementById("newToggle").addEventListener("change", function (e) {
+    state.newOnly = e.target.checked;
+    state.page = 1;
+    render();
+  });
+  document.getElementById("scoreSlider").addEventListener("input", function (e) {
+    state.minScore = Number(e.target.value);
+    document.getElementById("scoreSliderValue").textContent = state.minScore;
+    state.page = 1;
+    render();
+  });
+  document.getElementById("resetFilters").addEventListener("click", function () {
+    state.search = ""; state.industry.clear(); state.size.clear(); state.competitor.clear(); state.category.clear(); state.country.clear();
+    state.icpOnly = true; state.newOnly = false; state.minScore = 0; state.page = 1;
+    document.getElementById("searchInput").value = "";
+    document.getElementById("icpToggle").checked = true;
+    document.getElementById("newToggle").checked = false;
+    document.getElementById("scoreSlider").value = 0;
+    document.getElementById("scoreSliderValue").textContent = "0";
+    document.querySelectorAll(".multiselect input[type=checkbox]").forEach(function (cb) { cb.checked = false; });
+    document.querySelectorAll(".multiselect").forEach(function (el) { updateMultiselectLabel(el, el.dataset.key, 0); });
+    render();
+  });
+  document.querySelectorAll("#acctTable thead th[data-sort]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var key = th.dataset.sort;
+      if (state.sortKey === key) state.sortDir *= -1; else { state.sortKey = key; state.sortDir = key === "account" || key === "industry" || key === "size" || key === "trend" ? 1 : -1; }
+      state.page = 1;
+      render();
+    });
+  });
+  document.getElementById("prevPage").addEventListener("click", function () { if (state.page > 1) { state.page--; render(); } });
+  document.getElementById("nextPage").addEventListener("click", function () { state.page++; render(); });
+  document.getElementById("toggleBarTable").addEventListener("click", function () {
+    var wrap = document.getElementById("barTableWrap");
+    var showing = wrap.style.display !== "none";
+    wrap.style.display = showing ? "none" : "block";
+    this.textContent = showing ? "View as table" : "Hide table";
+  });
+
+  // ---------- CSV download ----------
+  var downloadsApi = null;
+  var downloadsChecked = false;
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("downloads").then(function (api) {
+      downloadsApi = api;
+      downloadsChecked = true;
+    }).catch(function () { downloadsChecked = true; });
+  } else {
+    downloadsChecked = true;
+  }
+
+  function setDownloadStatus(msg) {
+    document.getElementById("downloadStatus").textContent = msg || "";
+  }
+
+  function csvEscape(v) {
+    var s = v === null || v === undefined ? "" : String(v);
+    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function accountsToCsv(list) {
+    var headers = [
+      "First Activity Date", "Last Activity Date", "Account Name", "Account Domain",
+      "Account Annual Revenue", "Account Size", "Account Industry",
+      "Revenue Band", "Country", "ICP Fit", "Intent Score", "Activity Count",
+      "Unica Activity Count", "Trend vs Prior " + currentRangeDays + "d", "Activity Labels",
+      "Competitors Researched", "Categories Researched"
+    ];
+    var lines = [headers.join(",")];
+    list.forEach(function (a) {
+      var competitorsStr = Object.keys(a.competitors || {})
+        .sort(function (x, y) { return a.competitors[y] - a.competitors[x]; })
+        .map(function (k) { return k + " (" + a.competitors[k] + ")"; }).join("; ");
+      var categoriesStr = Object.keys(a.categories || {})
+        .sort(function (x, y) { return a.categories[y] - a.categories[x]; })
+        .map(function (k) { return k + " (" + a.categories[k] + ")"; }).join("; ");
+      lines.push([
+        csvEscape(a.firstActivityDate),
+        csvEscape(a.lastActivityDate),
+        csvEscape(a.account),
+        csvEscape(a.domain),
+        csvEscape(a.revenue == null ? "" : a.revenue),
+        csvEscape(a.size),
+        csvEscape(a.industry),
+        csvEscape(a.revenueBand),
+        csvEscape(a.country),
+        csvEscape(a.icpFit ? "Yes" : "No"),
+        csvEscape(a.intentScore),
+        csvEscape(a.activityCount),
+        csvEscape(a.unicaCount),
+        csvEscape(a.trend),
+        csvEscape((a.activityLabels || []).join(", ")),
+        csvEscape(competitorsStr),
+        csvEscape(categoriesStr)
+      ].join(","));
+    });
+    return lines.join("\r\n");
+  }
+
+  function copyCsvFallback(csv, count) {
+    function ok() { setDownloadStatus("Couldn't trigger a file save here, so copied " + count + " accounts as CSV to your clipboard instead — paste into a spreadsheet and save."); }
+    function fail() { setDownloadStatus("Couldn't save a file or copy to the clipboard in this view. Try opening the artifact in its own browser tab."); }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(csv).then(ok).catch(function () { legacyCopy(csv) ? ok() : fail(); });
+        return;
+      }
+    } catch (e) {}
+    legacyCopy(csv) ? ok() : fail();
+  }
+  function legacyCopy(text) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      var success = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return success;
+    } catch (e) { return false; }
+  }
+
+  document.getElementById("downloadCsv").addEventListener("click", function () {
+    var list = sorted(filtered());
+    if (!list.length) { setDownloadStatus("No accounts in the current filter to export."); return; }
+    var csv = accountsToCsv(list);
+    var today = isoDate(state.rangeEnd);
+    var button = this;
+
+    function attemptSave(filename, data) {
+      if (!downloadsApi) {
+        copyCsvFallback(data, list.length);
+        return;
+      }
+      button.disabled = true;
+      downloadsApi.save({ filename: filename, data: data }).then(function () {
+        setDownloadStatus("Saved " + filename + " (" + list.length + " accounts).");
+      }).catch(function (err) {
+        if (err && (err.code === "extension_not_enabled" || err.code === "rejected_extension") && /\.csv$/.test(filename)) {
+          attemptSave(filename.replace(/\.csv$/, ".txt"), data);
+          return;
+        }
+        if (err && err.code === "declined") { setDownloadStatus("Download cancelled."); return; }
+        if (err && err.code === "rate_limited") { setDownloadStatus("Still waiting on the last download prompt — try again in a moment."); return; }
+        copyCsvFallback(data, list.length);
+      }).finally(function () { button.disabled = false; });
+    }
+    attemptSave("priority-accounts-" + today + ".csv", csv);
+  });
+
+  function filtered() {
+    return accounts.filter(function (a) {
+      if (state.icpOnly && !a.icpFit) return false;
+      if (state.newOnly && !a.isNewInRange) return false;
+      if (state.minScore > 0 && a.intentScore < state.minScore) return false;
+      if (state.search && !(a.account.toLowerCase().indexOf(state.search) > -1 || (a.domain || "").toLowerCase().indexOf(state.search) > -1)) return false;
+      if (state.industry.size && !state.industry.has(a.industry)) return false;
+      if (state.size.size && !state.size.has(a.size)) return false;
+      if (state.country.size && !state.country.has(a.country)) return false;
+      if (state.competitor.size) {
+        var keys = Object.keys(a.competitors || {});
+        var hit = keys.some(function (k) { return state.competitor.has(k); });
+        if (!hit && state.competitor.has(UNICA_LABEL) && a.unicaCount > 0) hit = true;
+        if (!hit) return false;
+      }
+      if (state.category.size) {
+        var catKeys = Object.keys(a.categories || {});
+        if (!catKeys.some(function (k) { return state.category.has(k); })) return false;
+      }
+      return true;
+    });
+  }
+
+  function sorted(list) {
+    var key = state.sortKey, dir = state.sortDir;
+    return list.slice().sort(function (a, b) {
+      var av = a[key], bv = b[key];
+      if (typeof av === "string") { av = av.toLowerCase(); bv = (bv || "").toLowerCase(); }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }
+
+  var currentRangeDays = 30;
+
+  function render() {
+    accounts = computeAccountsForRange(state.rangeStart, state.rangeEnd);
+
+    var maxObservedScore = accounts.reduce(function (m, a) { return Math.max(m, a.intentScore); }, 0);
+    var sliderMax = Math.max(10, Math.ceil(maxObservedScore));
+    scoreSliderEl.max = String(sliderMax);
+    if (state.minScore > sliderMax) { state.minScore = 0; scoreSliderEl.value = 0; document.getElementById("scoreSliderValue").textContent = "0"; }
+
+    currentRangeDays = updateHeaderText();
+
+    var list = filtered();
+    renderKpis(list);
+    renderCounts(list);
+    var sortedList = sorted(list);
+    renderTable(sortedList);
+    renderBars(list);
+    renderHeatmap(list);
+  }
+
+  function renderKpis(list) {
+    var icpCount = list.filter(function (a) { return a.icpFit; }).length;
+    var totalActivity = list.reduce(function (s, a) { return s + a.activityCount; }, 0);
+    var unicaAccounts = list.filter(function (a) { return a.unicaCount > 0; }).length;
+    var compTotals = {};
+    list.forEach(function (a) {
+      Object.keys(a.competitors || {}).forEach(function (k) { compTotals[k] = (compTotals[k] || 0) + a.competitors[k]; });
+    });
+    var topComp = Object.keys(compTotals).sort(function (x, y) { return compTotals[y] - compTotals[x]; })[0];
+
+    var kpis = [
+      { label: "Accounts in view", value: list.length.toLocaleString(), sub: icpCount + " ICP-fit" },
+      { label: "Tracked activity", value: totalActivity.toLocaleString(), sub: "views this " + currentRangeDays + "d range" },
+      { label: "Researching HCL Unica", value: unicaAccounts.toLocaleString(), sub: "accounts with own-product signal" },
+      { label: "Top competitor", value: topComp ? topComp.replace(" (incl. Selligent, Cheetah Digital)", "") : "—", sub: topComp ? compTotals[topComp].toLocaleString() + " views" : "no data" }
+    ];
+    var row = document.getElementById("kpiRow");
+    row.innerHTML = kpis.map(function (k) {
+      return '<div class="kpi"><div class="kpi-label">' + esc(k.label) + '</div><div class="kpi-value">' + esc(k.value) + '</div><div class="kpi-sub">' + esc(k.sub) + '</div></div>';
+    }).join("");
+  }
+
+  function renderCounts(list) {
+    var total = accounts.length;
+    document.getElementById("filterSummary").innerHTML =
+      "Showing <strong>" + list.length.toLocaleString() + "</strong> of " + total.toLocaleString() + " tracked accounts.";
+  }
+
+  function renderTable(list) {
+    var tbody = document.getElementById("acctTbody");
+    var start = (state.page - 1) * state.pageSize;
+    var pageItems = list.slice(start, start + state.pageSize);
+    document.getElementById("emptyState").style.display = list.length === 0 ? "block" : "none";
+    document.getElementById("acctTable").style.display = list.length === 0 ? "none" : "table";
+
+    tbody.innerHTML = pageItems.map(function (a) {
+      var chips = Object.keys(a.competitors || {}).sort(function (x, y) { return a.competitors[y] - a.competitors[x]; })
+        .map(function (k) { return '<span class="chip">' + esc(k) + ' <b>' + a.competitors[k] + '</b></span>'; }).join("");
+      if (a.unicaCount > 0) chips = '<span class="chip unica">HCL Unica <b>' + a.unicaCount + '</b></span>' + chips;
+      if (!chips) chips = '<span class="chip">—</span>';
+      return "<tr>" +
+        '<td><div class="acct-name">' + esc(a.account) + (a.icpFit ? ' <span class="pill pill-icp">ICP</span>' : '') + '</div><div class="acct-domain">' + esc(a.domain || "") + "</div></td>" +
+        "<td>" + esc(a.industry) + "</td>" +
+        "<td>" + esc(a.size) + "</td>" +
+        '<td class="num score-cell">' + a.intentScore.toFixed(1) + "</td>" +
+        '<td class="num">' + a.activityCount + "</td>" +
+        '<td class="num">' + a.unicaCount + "</td>" +
+        '<td><span class="pill ' + trendClass(a.trend) + '">' + esc(a.trend) + "</span></td>" +
+        '<td><div class="chip-row">' + chips + "</div></td>" +
+        "</tr>";
+    }).join("");
+
+    document.querySelectorAll("#acctTable thead th[data-sort]").forEach(function (th) {
+      th.classList.toggle("sorted", th.dataset.sort === state.sortKey);
+      var arrow = th.querySelector(".arrow");
+      arrow.innerHTML = th.dataset.sort === state.sortKey ? (state.sortDir === 1 ? "&#9652;" : "&#9662;") : "&#9662;";
+    });
+
+    var totalPages = Math.max(1, Math.ceil(list.length / state.pageSize));
+    if (state.page > totalPages) state.page = totalPages;
+    document.getElementById("pageInfo").textContent =
+      list.length === 0 ? "" : "Page " + state.page + " of " + totalPages + " · " + list.length.toLocaleString() + " accounts";
+    document.getElementById("prevPage").disabled = state.page <= 1;
+    document.getElementById("nextPage").disabled = state.page >= totalPages;
+    document.getElementById("tableHint").textContent = "sorted by " + state.sortKey + (state.sortDir === 1 ? " (asc)" : " (desc)");
+  }
+
+  function renderBars(list) {
+    var totals = {};
+    competitorBuckets.forEach(function (b) { totals[b] = 0; });
+    var unicaTotal = 0;
+    list.forEach(function (a) {
+      unicaTotal += a.unicaCount > 0 ? 1 : 0;
+      Object.keys(a.competitors || {}).forEach(function (k) { totals[k] = (totals[k] || 0) + 1; });
+    });
+    var entries = [["HCL Unica (Own)", unicaTotal]].concat(
+      Object.keys(totals).map(function (k) { return [k, totals[k]]; })
+    ).filter(function (e) { return e[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
+
+    var max = entries.length ? entries[0][1] : 1;
+    var barList = document.getElementById("barList");
+    if (!entries.length) {
+      barList.innerHTML = '<div class="empty-state" style="padding:16px 0;">No product research in this filtered set.</div>';
+    } else {
+      barList.innerHTML = entries.map(function (e) {
+        var isOwn = e[0] === "HCL Unica (Own)";
+        var pct = Math.max(2, Math.round((e[1] / max) * 100));
+        return '<div class="bar-row">' +
+          '<span class="bar-label' + (isOwn ? ' own' : '') + '">' + esc(e[0]) + '</span>' +
+          '<span class="bar-track"><span class="bar-fill' + (isOwn ? ' own' : '') + '" style="width:' + pct + '%"></span></span>' +
+          '<span class="bar-value">' + e[1].toLocaleString() + '</span>' +
+          '</div>';
+      }).join("");
+    }
+    document.querySelector("#barTable tbody").innerHTML = entries.map(function (e) {
+      return "<tr><td>" + esc(e[0]) + '</td><td class="num">' + e[1].toLocaleString() + "</td></tr>";
+    }).join("");
+  }
+
+  function renderHeatmap(list) {
+    var industriesInView = Array.from(new Set(list.map(function (a) { return a.industry; }).filter(Boolean))).sort();
+    var matrix = {};
+    industriesInView.forEach(function (ind) { matrix[ind] = {}; competitorBuckets.forEach(function (b) { matrix[ind][b] = 0; }); });
+    var colTotals = {};
+    competitorBuckets.forEach(function (b) { colTotals[b] = 0; });
+    list.forEach(function (a) {
+      Object.keys(a.competitors || {}).forEach(function (k) {
+        if (matrix[a.industry] && k in matrix[a.industry]) { matrix[a.industry][k]++; colTotals[k]++; }
+      });
+    });
+    var activeCols = competitorBuckets.filter(function (b) { return colTotals[b] > 0; });
+    var maxVal = 1;
+    industriesInView.forEach(function (ind) { activeCols.forEach(function (b) { maxVal = Math.max(maxVal, matrix[ind][b]); }); });
+
+    var wrap = document.getElementById("heatWrap");
+    if (!industriesInView.length || !activeCols.length) {
+      wrap.innerHTML = '<div class="empty-state" style="padding:16px 0;">No competitor research to break down yet.</div>';
+      return;
+    }
+    var html = '<table class="heat-table"><thead><tr><th class="row-head">Industry</th>';
+    activeCols.forEach(function (b) { html += "<th>" + esc(b.replace(" (incl. Selligent, Cheetah Digital)", "")) + "</th>"; });
+    html += "</tr></thead><tbody>";
+    industriesInView.forEach(function (ind) {
+      html += '<tr><th class="row-head">' + esc(ind) + "</th>";
+      activeCols.forEach(function (b) {
+        var v = matrix[ind][b];
+        var t = v / maxVal;
+        var ramp = t === 0 ? "transparent" : t < 0.25 ? "var(--ramp-1)" : t < 0.5 ? "var(--ramp-2)" : t < 0.75 ? "var(--ramp-3)" : "var(--ramp-4)";
+        html += '<td class="heat-cell" style="background:' + ramp + '">' + (v || "·") + "</td>";
+      });
+      html += "</tr>";
+    });
+    html += "</tbody></table>";
+    wrap.innerHTML = html;
+  }
+
+  render();
+})();
+</script>
