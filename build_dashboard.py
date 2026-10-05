@@ -24,8 +24,17 @@ BASE_DIR = Path(__file__).parent
 MASTER_PATH = BASE_DIR / "master_activity.csv"
 OUTPUT_PATH = BASE_DIR / "dashboard.xlsx"
 JSON_OUTPUT_PATH = BASE_DIR / "dashboard_data.json"
+# Same payload minus individual-level lead PII (names/emails/phones) — safe for
+# hosts that aren't access-controlled (e.g. the Vercel deploy).
+JSON_PUBLIC_OUTPUT_PATH = BASE_DIR / "dashboard_data_public.json"
+LEADS_MASTER_PATH = BASE_DIR / "master_leads.csv"
 
 OBJECT_SLOTS = ["1", "2", "3"]
+LEAD_COLUMNS = [
+    "Delivery Date", "First Name", "Last Name", "Job Title", "Company", "Industry", "Country",
+    "Email Address", "Phone", "Direct Number", "Buying Timeframe", "Asset Downloaded", "LinkedIn",
+]
+LEAD_KEY = ["Email Address", "Delivery Date", "Asset Downloaded"]
 
 
 def merge_new_files(new_paths):
@@ -51,6 +60,110 @@ def merge_new_files(new_paths):
     print(f"master_activity.csv: {before_rows} -> {after_dedup} rows "
           f"({added} new, {before_dedup - after_dedup} duplicate rows discarded this run)")
     return merged
+
+
+def _clean_lead_frame(df):
+    """Normalize one 'All Leads' sheet to LEAD_COLUMNS as clean strings."""
+    missing = [c for c in LEAD_COLUMNS if c not in df.columns]
+    if missing:
+        raise SystemExit(f"Lead file is missing expected columns: {missing}")
+    df = df[LEAD_COLUMNS].copy()
+
+    dates = pd.to_datetime(df["Delivery Date"], errors="coerce")
+    df["Delivery Date"] = dates.dt.strftime("%Y-%m-%d").fillna(df["Delivery Date"].astype(str))
+
+    # Excel stores phone numbers as floats (1.6e10) — render as plain digits.
+    def digits(v):
+        if pd.isna(v):
+            return ""
+        if isinstance(v, float):
+            return str(int(round(v)))
+        return str(v).strip()
+
+    df["Phone"] = df["Phone"].map(digits)
+    for col in LEAD_COLUMNS:
+        if col != "Phone":
+            df[col] = df[col].map(lambda v: "" if pd.isna(v) else str(v).strip())
+    df["Email Address"] = df["Email Address"].str.lower()
+    return df
+
+
+def merge_new_leads(xlsx_paths):
+    """Merge lead workbooks ('All Leads' sheet) into master_leads.csv.
+
+    Later rows win on key collisions: a re-delivered master list is
+    authoritative over what was stored earlier (e.g. corrected phone numbers).
+    """
+    frames = []
+    if LEADS_MASTER_PATH.exists():
+        frames.append(pd.read_csv(LEADS_MASTER_PATH, dtype=str, keep_default_na=False))
+    before_rows = sum(len(f) for f in frames)
+
+    for p in xlsx_paths:
+        frames.append(_clean_lead_frame(pd.read_excel(p, sheet_name="All Leads")))
+
+    merged = pd.concat(frames, ignore_index=True)
+    merged = merged.drop_duplicates(subset=LEAD_KEY, keep="last")
+    merged = merged.sort_values(["Delivery Date", "Company", "Last Name"]).reset_index(drop=True)
+    merged.to_csv(LEADS_MASTER_PATH, index=False)
+    print(f"master_leads.csv: {before_rows} -> {len(merged)} leads ({len(merged) - before_rows} net new)")
+    return merged
+
+
+def load_master_leads():
+    if not LEADS_MASTER_PATH.exists():
+        return pd.DataFrame(columns=LEAD_COLUMNS)
+    return pd.read_csv(LEADS_MASTER_PATH, dtype=str, keep_default_na=False)
+
+
+_NAME_NOISE = re.compile(
+    r"\b(inc|incorporated|llc|ltd|limited|corp|corporation|co|company|group|holdings|plc|sa|ag|gmbh|the|of|and)\b"
+)
+
+
+def normalize_company(name):
+    n = re.sub(r"[^\w\s]", " ", (name or "").lower())
+    n = _NAME_NOISE.sub(" ", n)
+    return re.sub(r"\s+", " ", n).strip()
+
+
+def attach_leads(account_records, leads_df):
+    """Return ({account index: [lead dicts]}, summary).
+
+    Match on email domain == account domain first (high precision); fall back
+    to an exact normalized company-name match only when it is unambiguous.
+    Unmatched leads stay in master_leads.csv but aren't shown on any account.
+    """
+    by_domain, by_name = {}, {}
+    for i, a in enumerate(account_records):
+        dom = (a.get("domain") or "").lower().strip()
+        if dom:
+            by_domain.setdefault(dom, []).append(i)
+        by_name.setdefault(normalize_company(a["account"]), []).append(i)
+
+    attached, matched, unmatched = {}, 0, 0
+    for r in leads_df.to_dict("records"):
+        domain = r["Email Address"].split("@")[-1].lower().strip() if "@" in r["Email Address"] else ""
+        targets = by_domain.get(domain, [])
+        if not targets:
+            cands = by_name.get(normalize_company(r["Company"]), [])
+            targets = cands if len(cands) == 1 else []
+        if not targets:
+            unmatched += 1
+            continue
+        matched += 1
+        lead = {
+            "date": r["Delivery Date"], "first": r["First Name"], "last": r["Last Name"],
+            "title": r["Job Title"], "email": r["Email Address"], "phone": r["Phone"],
+            "direct": r["Direct Number"], "timeframe": r["Buying Timeframe"],
+            "asset": r["Asset Downloaded"], "linkedin": r["LinkedIn"], "company": r["Company"],
+        }
+        for t in targets:
+            attached.setdefault(t, []).append(lead)
+
+    for lst in attached.values():
+        lst.sort(key=lambda l: l["date"], reverse=True)
+    return attached, {"total": len(leads_df), "matched": matched, "unmatched": unmatched}
 
 
 def parse_size_lower_bound(size_str):
@@ -210,8 +323,16 @@ def category_counts_window(exploded, window_start, window_end):
 
 
 def main():
-    new_paths = sys.argv[1:]
-    merged = merge_new_files(new_paths)
+    csv_paths = [p for p in sys.argv[1:] if p.lower().endswith(".csv")]
+    lead_paths = [p for p in sys.argv[1:] if p.lower().endswith((".xlsx", ".xlsm"))]
+    other = [p for p in sys.argv[1:] if p not in csv_paths and p not in lead_paths]
+    if other:
+        raise SystemExit(f"Unsupported file type (expected .csv activity export or .xlsx lead list): {other}")
+
+    merged = merge_new_files(csv_paths)
+    if lead_paths:
+        merge_new_leads(lead_paths)
+    leads_df = load_master_leads()
 
     merged["Activity Date"] = pd.to_datetime(merged["Activity Date"], errors="coerce")
     merged = merged.dropna(subset=["Activity Date"])
@@ -246,7 +367,14 @@ def main():
     activity_span = mapped_all.groupby("Account Name")["Activity Date"].agg(["min", "max"])
 
     # ICP fit per account (dedup account attribute rows from the raw merged df)
-    acct_attrs = merged.drop_duplicates(subset=["Account Name"], keep="last").set_index("Account Name")
+    # "last" must mean chronologically latest activity, not last-in-upload-order —
+    # backfills are routinely uploaded out of chronological order, and account
+    # attributes (industry/size/revenue) can shift between TrustRadius snapshots.
+    acct_attrs = (
+        merged.sort_values("Activity Date")
+        .drop_duplicates(subset=["Account Name"], keep="last")
+        .set_index("Account Name")
+    )
 
     rows = []
     for account, cur in current.items():
@@ -359,14 +487,15 @@ def main():
 
     # All activity (any vendor, tracked or not) for these accounts — needed
     # so "researching category" can see the full competitive landscape, not
-    # just our named-competitor allow-list.
+    # just our named-competitor allow-list. Vendor/product are shipped raw
+    # (not pre-classified into buckets) so the dashboard's Settings tab can
+    # redefine competitor rules and reclassify entirely client-side.
     event_exploded = exploded[exploded["Account Name"].isin(account_index)]
 
-    competitor_buckets = sorted({
-        b for b in event_exploded.loc[tracked_mask, "bucket"].unique()
-        if b and b != "HCL Unica (Own)"
-    })
-    bucket_index = {b: i for i, b in enumerate(competitor_buckets)}
+    vendor_list = sorted(set(event_exploded["Vendor"]))
+    vendor_index = {v: i for i, v in enumerate(vendor_list)}
+    product_list = sorted(set(event_exploded["Product"]))
+    product_index = {p: i for i, p in enumerate(product_list)}
     category_list = sorted({c for c in event_exploded["Category"] if c})
     category_index = {c: i for i, c in enumerate(category_list)}
     label_list = sorted(set(event_exploded["Activity Label"]))
@@ -374,16 +503,29 @@ def main():
 
     events = []
     for _, r in event_exploded.iterrows():
-        bucket = r["bucket"]
         category = r["Category"]
         events.append([
             account_index[r["Account Name"]],
             r["Activity Date"].date().isoformat(),
-            1 if r["is_own"] else 0,
-            bucket_index.get(bucket, -1),
+            vendor_index[r["Vendor"]],
+            product_index[r["Product"]],
             category_index.get(category, -1) if category else -1,
             label_index[r["Activity Label"]],
         ])
+
+    # Default competitor rules, serialized for the client (same shape as
+    # config.RULES — the Settings tab edits a copy of this structure).
+    attached_leads, leads_summary = attach_leads(account_records, leads_df)
+
+    default_rules = [
+        {
+            "bucket": rule["bucket"],
+            "vendor": rule["vendor"],
+            "products": sorted(rule["products"]) if rule["products"] is not None else None,
+            "own": rule.get("own", False),
+        }
+        for rule in config.RULES
+    ]
 
     payload = {
         "dataStart": str(merged["Activity Date"].min().date()),
@@ -397,12 +539,27 @@ def main():
         "defaultLabelWeight": config.DEFAULT_LABEL_WEIGHT,
         "ownMultiplier": config.OWN_PRODUCT_MULTIPLIER,
         "competitorMultiplier": config.COMPETITOR_MULTIPLIER,
-        "competitorBuckets": competitor_buckets,
+        "defaultRules": default_rules,
+        "vendorList": vendor_list,
+        "productList": product_list,
         "categoryList": category_list,
         "labelList": label_list,
         "accounts": account_records,
         "events": events,
+        "leadsIncluded": False,
+        "leadsSummary": leads_summary,
     }
+    # Lead counts are not PII, so both variants carry them (powers the 'Leads sourced' filter).
+    for idx, lead_list in attached_leads.items():
+        account_records[idx]["leadCount"] = len(lead_list)
+    # Public variant: no individual-level lead data at all.
+    JSON_PUBLIC_OUTPUT_PATH.write_text(json.dumps(payload, default=str))
+
+    # Private variant: leads embedded per account (names/emails/phones — PII).
+    for idx, lead_list in attached_leads.items():
+        account_records[idx] = {**account_records[idx], "leads": lead_list}
+    payload["accounts"] = account_records
+    payload["leadsIncluded"] = True
     JSON_OUTPUT_PATH.write_text(json.dumps(payload, default=str))
 
     print(f"Wrote {OUTPUT_PATH.name}: {len(priority)} ICP-fit accounts, "
@@ -410,6 +567,8 @@ def main():
           f"{len(unmapped)} unmapped product rows to review")
     print(f"Wrote {JSON_OUTPUT_PATH.name}: {len(account_records)} accounts, {len(events)} events, "
           f"data span {payload['dataStart']}..{payload['dataEnd']}")
+    print(f"Wrote {JSON_PUBLIC_OUTPUT_PATH.name} (no lead PII). Leads: {leads_summary['total']} total, "
+          f"{leads_summary['matched']} linked to a tracked account, {leads_summary['unmatched']} unmatched")
 
 
 if __name__ == "__main__":

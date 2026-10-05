@@ -207,8 +207,8 @@
   .filter-summary strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 
   /* layout grid: table + side panel */
-  .grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
-  @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 820px) { .charts-row { grid-template-columns: 1fr; } }
 
   .panel-head { padding: 14px 16px 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .panel-head h2 { font-size: 1rem; font-weight: 700; }
@@ -253,9 +253,8 @@
   .pagination button:disabled { opacity: 0.4; cursor: default; }
   .pagination button:not(:disabled):hover { background: var(--surface-alt); }
 
-  /* side panels: bar chart + heatmap */
-  .side-stack { display: flex; flex-direction: column; gap: 18px; }
-  .bar-list { display: flex; flex-direction: column; gap: 9px; padding: 4px 16px 16px; }
+  /* charts row: bar chart + heatmap */
+  .bar-list { display: flex; flex-direction: column; gap: 9px; padding: 4px 16px 16px; max-height: 340px; overflow-y: auto; }
   .bar-row { display: grid; grid-template-columns: 130px 1fr 46px; align-items: center; gap: 8px; font-size: 0.78rem; }
   .bar-row .bar-label { color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bar-row .bar-label.own { color: var(--accent); font-weight: 700; }
@@ -266,7 +265,7 @@
 
   .details-toggle { font-size: 0.76rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0 16px 12px; text-decoration: underline; text-underline-offset: 2px; }
 
-  .heat-wrap { overflow-x: auto; padding: 4px 16px 16px; }
+  .heat-wrap { overflow: auto; padding: 4px 16px 16px; max-height: 340px; }
   .heat-table { border-collapse: collapse; font-size: 0.76rem; min-width: 100%; }
   .heat-table th, .heat-table td { padding: 6px 8px; text-align: center; border: 1px solid var(--border); font-variant-numeric: tabular-nums; }
   .heat-table th.row-head { text-align: left; font-weight: 600; color: var(--text-primary); background: var(--surface); position: sticky; left: 0; }
@@ -275,6 +274,100 @@
 
   footer { padding: 16px 28px 32px; color: var(--text-muted); font-size: 0.76rem; max-width: 1440px; margin: 0 auto; width: 100%; }
   footer code { background: var(--surface-alt); border-radius: 4px; padding: 1px 5px; }
+
+  /* ---------- settings modal ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(11, 22, 38, 0.55); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .modal {
+    background: var(--surface); border-radius: 14px; box-shadow: var(--shadow);
+    width: 100%; max-width: 640px; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .modal-head h2 { font-size: 1.1rem; }
+  .modal-close { background: none; border: none; font-size: 1.3rem; line-height: 1; color: var(--text-muted); cursor: pointer; padding: 2px 6px; }
+  .modal-close:hover { color: var(--text-primary); }
+  .modal-tabs { display: flex; gap: 4px; padding: 10px 20px 0; border-bottom: 1px solid var(--border); }
+  .modal-tab { background: none; border: none; padding: 8px 12px; font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .modal-body { padding: 16px 20px; overflow-y: auto; flex: 1; }
+  .modal-hint { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 12px; }
+  .modal-foot { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-top: 1px solid var(--border); }
+  .btn-secondary, .btn-primary {
+    border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1px solid var(--border);
+  }
+  .btn-secondary { background: var(--surface); color: var(--text-primary); }
+  .btn-secondary:hover { background: var(--surface-alt); }
+  .btn-primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .btn-primary:hover { background: var(--accent-bright); border-color: var(--accent-bright); }
+
+  .field-block { margin-bottom: 14px; }
+  .field-block > label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field-row .field { flex: 1; min-width: 160px; }
+  .field-row label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
+  .field-row input[type="number"] {
+    width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px;
+    background: var(--surface); color: var(--text-primary); font-size: 0.85rem;
+  }
+  .checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 10px; max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+  .checklist label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+  .checklist input { accent-color: var(--accent); }
+
+  .rule-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .rule-row input[type="text"] {
+    border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; font-size: 0.8rem;
+    background: var(--surface); color: var(--text-primary);
+  }
+  .rule-row .rule-bucket { flex: 1.3; min-width: 0; }
+  .rule-row .rule-vendor { flex: 1; min-width: 0; }
+  .rule-row .rule-products { flex: 1.4; min-width: 0; }
+  .rule-row .rule-own { display: flex; align-items: center; gap: 3px; font-size: 0.72rem; color: var(--text-secondary); white-space: nowrap; }
+  .rule-row .rule-own input { accent-color: var(--accent); }
+  .rule-remove { background: none; border: 1px solid var(--border); border-radius: 7px; width: 26px; height: 26px; color: var(--critical); cursor: pointer; font-size: 0.9rem; line-height: 1; flex: none; }
+  .rule-remove:hover { background: var(--surface-alt); }
+  .rule-head { display: flex; gap: 6px; font-size: 0.68rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; margin-bottom: 4px; }
+  .rule-head span:nth-child(1) { flex: 1.3; }
+  .rule-head span:nth-child(2) { flex: 1; }
+  .rule-head span:nth-child(3) { flex: 1.4; }
+
+  .label-weight-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 0.82rem; }
+  .label-weight-row input { width: 64px; border: 1px solid var(--border); border-radius: 7px; padding: 5px 7px; background: var(--surface); color: var(--text-primary); text-align: right; }
+
+  /* ---------- account detail modal ---------- */
+  .acct-modal { max-width: 720px; }
+  .acct-modal-domain { font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0; }
+  .acct-meta-row { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 4px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .acct-meta-item { display: flex; flex-direction: column; gap: 2px; min-width: 100px; }
+  .acct-meta-item .meta-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; }
+  .acct-meta-item .meta-value { font-size: 0.85rem; color: var(--text-primary); font-weight: 600; }
+
+  .acct-leads { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .leads-count { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; }
+  .lead-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: var(--surface-sunken); }
+  .lead-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .lead-name { font-weight: 700; font-size: 0.88rem; }
+  .lead-title { color: var(--text-secondary); font-size: 0.78rem; }
+  .lead-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 6px; font-size: 0.78rem; color: var(--text-secondary); }
+  .lead-meta a { color: var(--accent); text-decoration: none; }
+  .lead-meta a:hover { text-decoration: underline; }
+  .lead-asset { margin-top: 6px; font-size: 0.76rem; color: var(--text-muted); }
+  .pill-lead { background: rgba(47,111,224,0.13); color: var(--new); }
+  .pill-hot { background: rgba(194,59,75,0.13); color: var(--critical); }
+  .pill-warm { background: rgba(185,119,14,0.14); color: var(--warning); }
+  .pill-cool { background: var(--surface-alt); color: var(--text-secondary); }
+
+  tbody#acctTbody tr { cursor: pointer; }
+  tbody#acctTbody tr:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+
+  .chart-svg-wrap { position: relative; }
+  .chart-tooltip {
+    position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 9px; font-size: 0.75rem; box-shadow: var(--shadow); white-space: nowrap;
+    transform: translate(-50%, -110%); display: none; z-index: 5; color: var(--text-primary);
+  }
+  .chart-tooltip .tt-date { color: var(--text-muted); font-size: 0.7rem; }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; }
@@ -289,7 +382,10 @@
         <h1>Intent Radar</h1>
         <p class="hero-sub" id="heroWindow">Loading window&hellip;</p>
       </div>
-      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">&#9789; Theme</button>
+      <div style="display:flex; gap:8px;">
+        <button class="theme-toggle" id="settingsToggle" type="button">&#9881; Settings</button>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">&#9789; Theme</button>
+      </div>
     </div>
     <div class="kpi-row" id="kpiRow"></div>
   </header>
@@ -381,76 +477,176 @@
         <span class="toggle-label">New in period</span>
       </div>
 
+      <div class="field toggle-field" style="padding-bottom:6px;">
+        <label class="switch">
+          <input type="checkbox" id="leadsToggle" />
+          <span class="track"></span>
+          <span class="thumb"></span>
+        </label>
+        <span class="toggle-label">Leads sourced</span>
+      </div>
+
       <button class="reset-link" id="resetFilters" type="button">Reset filters</button>
     </section>
     <p class="filter-summary" id="filterSummary"></p>
 
-    <div class="grid">
+    <div class="charts-row">
       <section class="panel">
         <div class="panel-head">
-          <h2>Priority accounts</h2>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span class="hint" id="tableHint"></span>
-            <button class="reset-link" id="downloadCsv" type="button" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px;">&#8681; Download CSV</button>
-          </div>
+          <h2>Research volume by product</h2>
+          <span class="hint" id="barHint">filtered set</span>
         </div>
-        <p class="hint" id="downloadStatus" style="padding:0 16px; min-height: 1em;"></p>
-        <div class="table-wrap">
-          <table id="acctTable">
-            <thead>
-              <tr>
-                <th data-sort="account">Account <span class="arrow">&#9662;</span></th>
-                <th data-sort="industry">Industry <span class="arrow">&#9662;</span></th>
-                <th data-sort="size">Size <span class="arrow">&#9662;</span></th>
-                <th class="num" data-sort="intentScore">Intent score <span class="arrow">&#9662;</span></th>
-                <th class="num" data-sort="activityCount">Activity <span class="arrow">&#9662;</span></th>
-                <th class="num" data-sort="unicaCount">Unica views <span class="arrow">&#9662;</span></th>
-                <th data-sort="trend">Trend <span class="arrow">&#9662;</span></th>
-                <th>Researching</th>
-              </tr>
-            </thead>
-            <tbody id="acctTbody"></tbody>
-          </table>
-          <div class="empty-state" id="emptyState" style="display:none;">No accounts match these filters. Try widening them.</div>
-        </div>
-        <div class="pagination">
-          <span id="pageInfo"></span>
-          <div>
-            <button id="prevPage" type="button">&larr; Prev</button>
-            <button id="nextPage" type="button">Next &rarr;</button>
-          </div>
+        <div class="bar-list" id="barList"></div>
+        <button class="details-toggle" id="toggleBarTable" type="button">View as table</button>
+        <div class="table-wrap" id="barTableWrap" style="display:none;">
+          <table id="barTable"><thead><tr><th>Product</th><th class="num">Accounts researching</th></tr></thead><tbody></tbody></table>
         </div>
       </section>
 
-      <div class="side-stack">
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Research volume by product</h2>
-            <span class="hint" id="barHint">filtered set</span>
-          </div>
-          <div class="bar-list" id="barList"></div>
-          <button class="details-toggle" id="toggleBarTable" type="button">View as table</button>
-          <div class="table-wrap" id="barTableWrap" style="display:none;">
-            <table id="barTable"><thead><tr><th>Product</th><th class="num">Accounts researching</th></tr></thead><tbody></tbody></table>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Industry &times; product</h2>
-            <span class="hint" id="heatHint">accounts researching, filtered set</span>
-          </div>
-          <div class="heat-wrap" id="heatWrap"></div>
-        </section>
-      </div>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Industry &times; product</h2>
+          <span class="hint" id="heatHint">accounts researching, filtered set</span>
+        </div>
+        <div class="heat-wrap" id="heatWrap"></div>
+      </section>
     </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Priority accounts</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="hint" id="tableHint"></span>
+          <button class="reset-link" id="downloadCsv" type="button" style="text-decoration:none; display:inline-flex; align-items:center; gap:5px;">&#8681; Download CSV</button>
+        </div>
+      </div>
+      <p class="hint" id="downloadStatus" style="padding:0 16px; min-height: 1em;"></p>
+      <div class="table-wrap">
+        <table id="acctTable">
+          <thead>
+            <tr>
+              <th data-sort="account">Account <span class="arrow">&#9662;</span></th>
+              <th data-sort="industry">Industry <span class="arrow">&#9662;</span></th>
+              <th data-sort="size">Size <span class="arrow">&#9662;</span></th>
+              <th class="num" data-sort="intentScore">Intent score <span class="arrow">&#9662;</span></th>
+              <th class="num" data-sort="activityCount">Activity <span class="arrow">&#9662;</span></th>
+              <th class="num" data-sort="unicaCount">Unica views <span class="arrow">&#9662;</span></th>
+              <th data-sort="trend">Trend <span class="arrow">&#9662;</span></th>
+              <th>Researching</th>
+            </tr>
+          </thead>
+          <tbody id="acctTbody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState" style="display:none;">No accounts match these filters. Try widening them.</div>
+      </div>
+      <div class="pagination">
+        <span id="pageInfo"></span>
+        <div>
+          <button id="prevPage" type="button">&larr; Prev</button>
+          <button id="nextPage" type="button">Next &rarr;</button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer>
     <p id="dataCoverage" style="margin:0 0 6px;"></p>
+    <p id="leadsFootnote" style="margin:0 0 6px;"></p>
     ICP filter: industries <code id="ficIndustries"></code>, size &ge; <code id="ficSize"></code> employees OR revenue &ge; <code id="ficRevenue"></code>, geography global.
-    Scores are a weighted <span id="ficWindowDays"></span>-day rolling intent measure (activity type &times; recency &times; a higher weight for HCL Unica research vs. competitor research); &ldquo;Activity&rdquo; is the raw count of qualifying page views. &ldquo;Researching category&rdquo; covers every product category the account viewed on TrustRadius, not just our named competitor list.
+    Scores are a weighted <span id="ficWindowDays"></span>-day rolling intent measure (activity type &times; recency &times; a higher weight for <span id="ficOwnName"></span> research vs. competitor research); &ldquo;Activity&rdquo; is the raw count of qualifying page views. &ldquo;Researching category&rdquo; covers every product category the account viewed on TrustRadius, not just our named competitor list. Edit ICP, competitors, and scoring from Settings.
   </footer>
+</div>
+
+<div class="modal-overlay" id="settingsOverlay" style="display:none;">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-head">
+      <h2 id="settingsTitle">Settings</h2>
+      <button class="modal-close" id="settingsClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-tabs">
+      <button type="button" class="modal-tab active" data-tab="icp">ICP</button>
+      <button type="button" class="modal-tab" data-tab="competitors">Competitors</button>
+      <button type="button" class="modal-tab" data-tab="signals">Signals</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-pane" data-pane="icp">
+        <p class="modal-hint">An account qualifies as ICP when its industry is checked below AND its size or revenue clears the threshold.</p>
+        <div class="field-block">
+          <label>Target industries</label>
+          <div class="checklist" id="icpIndustryChecklist"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="icpMinEmployees">Min employees</label>
+            <input type="number" id="icpMinEmployees" min="0" step="1" />
+          </div>
+          <div class="field">
+            <label for="icpMinRevenue">Min revenue ($)</label>
+            <input type="number" id="icpMinRevenue" min="0" step="1000000" />
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-pane" data-pane="competitors" style="display:none;">
+        <p class="modal-hint">Each row maps a TrustRadius vendor (optionally limited to specific products, comma-separated — leave blank for "any product from this vendor") to a bucket. Exactly one row should be marked Own.</p>
+        <div id="rulesEditor"></div>
+        <button type="button" class="details-toggle" id="addRuleBtn" style="padding:8px 0 0;">+ Add competitor</button>
+        <datalist id="vendorDatalist"></datalist>
+      </div>
+
+      <div class="modal-pane" data-pane="signals" style="display:none;">
+        <p class="modal-hint">Weight applied per TrustRadius activity label, plus a multiplier for own-product vs. competitor research.</p>
+        <div id="labelWeightsEditor" class="field-block"></div>
+        <div class="field-row">
+          <div class="field">
+            <label for="ownMultInput">Own-product multiplier</label>
+            <input type="number" id="ownMultInput" min="0" step="0.5" />
+          </div>
+          <div class="field">
+            <label for="compMultInput">Competitor multiplier</label>
+            <input type="number" id="compMultInput" min="0" step="0.5" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="reset-link" id="settingsReset">Reset to defaults</button>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn-secondary" id="settingsCancel">Cancel</button>
+        <button type="button" class="btn-primary" id="settingsSave">Save &amp; apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="acctDetailOverlay" style="display:none;">
+  <div class="modal acct-modal" role="dialog" aria-modal="true" aria-labelledby="acctDetailTitle">
+    <div class="modal-head">
+      <div>
+        <h2 id="acctDetailTitle">Account</h2>
+        <p class="acct-modal-domain" id="acctDetailDomain"></p>
+      </div>
+      <button class="modal-close" id="acctDetailClose" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="acct-meta-row" id="acctMetaRow"></div>
+      <div class="panel-head" style="padding:0 0 4px;">
+        <h2 style="font-size:0.95rem;">Intent score over time</h2>
+        <span class="hint" id="acctChartHint"></span>
+      </div>
+      <div id="acctChartWrap"></div>
+      <button class="details-toggle" id="toggleAcctTable" type="button" style="padding:8px 0 0;">View as table</button>
+      <div class="table-wrap" id="acctWeeklyTableWrap" style="display:none;">
+        <table id="acctWeeklyTable"><thead><tr><th>Week ending</th><th class="num">Intent score</th><th class="num">Activity</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div class="acct-leads">
+        <div class="panel-head" style="padding:0 0 8px;">
+          <h2 style="font-size:0.95rem;">Leads delivered <span class="leads-count" id="acctLeadsCount"></span></h2>
+        </div>
+        <div id="acctLeadsList"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script id="dashboard-data" type="application/json">__DASHBOARD_DATA__</script>
@@ -465,12 +661,14 @@
   var dataEndMs = Date.parse(payload.dataEnd);
 
   // ---------- build per-account event index (once) ----------
+  // vendor/product are shipped raw (not pre-classified) so Settings can
+  // redefine competitor rules and everything reclassifies from here.
   var eventsByAccount = accountMeta.map(function () { return []; });
   var firstActivityMs = new Array(accountMeta.length).fill(null);
   var lastActivityMs = new Array(accountMeta.length).fill(null);
   payload.events.forEach(function (ev) {
-    var acctIdx = ev[0], ms = Date.parse(ev[1]), isOwn = !!ev[2], bucketIdx = ev[3], catIdx = ev[4], labelIdx = ev[5];
-    eventsByAccount[acctIdx].push({ ms: ms, isOwn: isOwn, bucketIdx: bucketIdx, catIdx: catIdx, labelIdx: labelIdx });
+    var acctIdx = ev[0], ms = Date.parse(ev[1]), vendorIdx = ev[2], productIdx = ev[3], catIdx = ev[4], labelIdx = ev[5];
+    eventsByAccount[acctIdx].push({ ms: ms, vendorIdx: vendorIdx, productIdx: productIdx, catIdx: catIdx, labelIdx: labelIdx });
     if (firstActivityMs[acctIdx] === null || ms < firstActivityMs[acctIdx]) firstActivityMs[acctIdx] = ms;
     if (lastActivityMs[acctIdx] === null || ms > lastActivityMs[acctIdx]) lastActivityMs[acctIdx] = ms;
   });
@@ -479,11 +677,106 @@
     return ms === null ? null : new Date(ms).toISOString().slice(0, 10);
   }
 
+  var accountIndexByName = {};
+  accountMeta.forEach(function (m, i) { accountIndexByName[m.account] = i; });
+
   function recencyWeight(ms, startMs, endMs) {
     var spanDays = Math.round((endMs - startMs) / DAY_MS);
     if (spanDays <= 0) return 1.0;
     var dayIndex = Math.round((ms - startMs) / DAY_MS);
     return 0.5 + 0.5 * (dayIndex / spanDays);
+  }
+
+  // ---------- configurable ICP / competitor rules / scoring signals ----------
+  function cloneRules(rules) {
+    return rules.map(function (r) {
+      return { bucket: r.bucket, vendor: r.vendor, products: r.products ? r.products.slice() : null, own: !!r.own };
+    });
+  }
+  function defaultConfig() {
+    return {
+      icpIndustries: payload.icpCriteria.industries.slice(),
+      minEmployees: payload.icpCriteria.minEmployees,
+      minRevenue: payload.icpCriteria.minRevenue,
+      rules: cloneRules(payload.defaultRules),
+      labelWeights: Object.assign({}, payload.labelWeights),
+      defaultLabelWeight: payload.defaultLabelWeight,
+      ownMultiplier: payload.ownMultiplier,
+      competitorMultiplier: payload.competitorMultiplier
+    };
+  }
+  function cloneConfig(cfg) {
+    return {
+      icpIndustries: cfg.icpIndustries.slice(),
+      minEmployees: cfg.minEmployees,
+      minRevenue: cfg.minRevenue,
+      rules: cloneRules(cfg.rules),
+      labelWeights: Object.assign({}, cfg.labelWeights),
+      defaultLabelWeight: cfg.defaultLabelWeight,
+      ownMultiplier: cfg.ownMultiplier,
+      competitorMultiplier: cfg.competitorMultiplier
+    };
+  }
+  function loadStoredConfig() {
+    try {
+      var raw = localStorage.getItem("intent-radar-config");
+      if (!raw) return null;
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.rules) || !Array.isArray(parsed.icpIndustries)) return null;
+      return parsed;
+    } catch (e) { return null; }
+  }
+  function saveStoredConfig(cfg) {
+    try { localStorage.setItem("intent-radar-config", JSON.stringify(cfg)); } catch (e) {}
+  }
+
+  var activeConfig = loadStoredConfig() || defaultConfig();
+  var compiledRules, ownBucketNameCache;
+
+  function compileRules() {
+    var map = new Map();
+    activeConfig.rules.forEach(function (r) {
+      if (!map.has(r.vendor)) map.set(r.vendor, []);
+      map.get(r.vendor).push({ bucket: r.bucket, own: !!r.own, productsSet: r.products ? new Set(r.products) : null });
+    });
+    compiledRules = map;
+    var ownRule = activeConfig.rules.find(function (r) { return r.own; });
+    ownBucketNameCache = ownRule ? ownRule.bucket : "Own product";
+  }
+  compileRules();
+
+  function ownBucketName() { return ownBucketNameCache; }
+
+  function classifyEvent(vendorIdx, productIdx) {
+    var vendorName = payload.vendorList[vendorIdx];
+    var rules = compiledRules.get(vendorName);
+    if (!rules) return null;
+    var productName = payload.productList[productIdx];
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (r.productsSet === null || r.productsSet.has(productName)) return r;
+    }
+    return null;
+  }
+
+  function parseSizeLowerBound(sizeStr) {
+    if (!sizeStr) return null;
+    var nums = (sizeStr.match(/[\d,]+/g) || []).map(function (s) { return parseInt(s.replace(/,/g, ""), 10); });
+    return nums.length ? Math.min.apply(null, nums) : null;
+  }
+  function computeIcpFit(meta) {
+    if (activeConfig.icpIndustries.indexOf(meta.industry) === -1) return false;
+    var sizeLb = parseSizeLowerBound(meta.size);
+    var sizeOk = sizeLb !== null && sizeLb >= activeConfig.minEmployees;
+    var revOk = meta.revenue !== null && meta.revenue !== undefined && meta.revenue >= activeConfig.minRevenue;
+    return sizeOk || revOk;
+  }
+
+  function currentCompetitorBuckets() {
+    return Array.from(new Set(activeConfig.rules.filter(function (r) { return !r.own; }).map(function (r) { return r.bucket; }))).sort();
+  }
+  function currentResearchOptions() {
+    return [ownBucketName()].concat(currentCompetitorBuckets());
   }
 
   // Aggregate one account's events into the score_window()-equivalent
@@ -493,19 +786,17 @@
     var competitorCounts = {}, categoryCounts = {}, labelsSeen = {};
     events.forEach(function (e) {
       if (e.ms < startMs || e.ms > endMs) return;
-      var qualifies = e.isOwn || e.bucketIdx >= 0;
-      if (qualifies) {
+      var cls = classifyEvent(e.vendorIdx, e.productIdx);
+      if (cls) {
         var labelName = payload.labelList[e.labelIdx];
-        var labelWeight = payload.labelWeights[labelName] || payload.defaultLabelWeight;
-        var mult = e.isOwn ? payload.ownMultiplier : payload.competitorMultiplier;
+        var labelWeight = activeConfig.labelWeights[labelName];
+        if (labelWeight === undefined) labelWeight = activeConfig.defaultLabelWeight;
+        var mult = cls.own ? activeConfig.ownMultiplier : activeConfig.competitorMultiplier;
         score += labelWeight * mult * recencyWeight(e.ms, startMs, endMs);
         count++;
         labelsSeen[labelName] = true;
-        if (e.isOwn) unicaCount++;
-        else {
-          var bName = payload.competitorBuckets[e.bucketIdx];
-          competitorCounts[bName] = (competitorCounts[bName] || 0) + 1;
-        }
+        if (cls.own) unicaCount++;
+        else competitorCounts[cls.bucket] = (competitorCounts[cls.bucket] || 0) + 1;
       }
       if (e.catIdx >= 0) {
         var cName = payload.categoryList[e.catIdx];
@@ -553,7 +844,8 @@
         revenueBand: meta.revenueBand,
         linkedinId: meta.linkedinId,
         country: meta.country,
-        icpFit: meta.icpFit,
+        icpFit: computeIcpFit(meta),
+        leadCount: meta.leadCount || 0,
         intentScore: summary.score,
         activityCount: summary.count,
         unicaCount: summary.unicaCount,
@@ -590,13 +882,24 @@
   });
 
   // ---------- header (static parts) ----------
-  document.getElementById("ficIndustries").textContent = payload.icpCriteria.industries.join(", ");
-  document.getElementById("ficSize").textContent = payload.icpCriteria.minEmployees.toLocaleString();
-  document.getElementById("ficRevenue").textContent = "$" + Math.round(payload.icpCriteria.minRevenue / 1e6) + "M";
   document.getElementById("dataCoverage").textContent =
     "Full upload history: " + payload.dataStart + " → " + payload.dataEnd + ". Pick any date range above — presets are relative to the most recent upload.";
 
+  if (payload.leadsIncluded && payload.leadsSummary) {
+    var ls = payload.leadsSummary;
+    document.getElementById("leadsFootnote").textContent =
+      ls.matched + " of " + ls.total + " delivered leads are linked to an account in this intent data (matched by email domain, then exact company name); the other " +
+      ls.unmatched + " aren't tracked accounts, so they appear on no account page.";
+  }
+
   var PRESET_LABELS = { "7": "Last 7 days", "30": "Last 30 days", "90": "Last 90 days", "all": "All time" };
+
+  function updateFooterText() {
+    document.getElementById("ficIndustries").textContent = activeConfig.icpIndustries.join(", ") || "(none selected)";
+    document.getElementById("ficSize").textContent = activeConfig.minEmployees.toLocaleString();
+    document.getElementById("ficRevenue").textContent = "$" + Math.round(activeConfig.minRevenue / 1e6) + "M";
+    document.getElementById("ficOwnName").textContent = ownBucketName();
+  }
 
   function updateHeaderText() {
     var rangeDays = Math.round((state.rangeEnd - state.rangeStart) / DAY_MS) + 1;
@@ -607,6 +910,7 @@
     document.getElementById("barHint").textContent = "filtered set · " + isoDate(state.rangeStart) + " → " + isoDate(state.rangeEnd);
     document.getElementById("heatHint").textContent = "accounts researching, filtered set · " + isoDate(state.rangeStart) + " → " + isoDate(state.rangeEnd);
     document.getElementById("ficWindowDays").textContent = rangeDays;
+    updateFooterText();
     return rangeDays;
   }
 
@@ -633,9 +937,6 @@
   var sizes = Array.from(new Set(accountMeta.map(function (a) { return a.size; }).filter(Boolean)));
   var sizeOrder = ["1 to 10", "10 to 50", "50 to 250", "250 to 500", "500 to 1,000", "1,000 to 5,000", "5,000 to 10,000", "10,000+"];
   sizes.sort(function (a, b) { return sizeOrder.indexOf(a) - sizeOrder.indexOf(b); });
-  var competitorBuckets = payload.competitorBuckets.slice().sort();
-  var UNICA_LABEL = "HCL Unica (Own)";
-  var researchOptions = [UNICA_LABEL].concat(competitorBuckets);
   var countries = Array.from(new Set(accountMeta.map(function (a) { return a.country; }).filter(Boolean))).sort();
   var categoryListSorted = payload.categoryList.slice().sort();
 
@@ -651,6 +952,7 @@
     country: new Set(),
     icpOnly: true,
     newOnly: false,
+    leadsOnly: false,
     minScore: 0,
     sortKey: "intentScore",
     sortDir: -1,
@@ -786,11 +1088,19 @@
     }
   }
 
-  document.querySelectorAll(".multiselect").forEach(function (el) {
-    var key = el.dataset.key;
-    var opts = key === "industry" ? industries : key === "size" ? sizes : key === "country" ? countries : key === "category" ? categoryListSorted : researchOptions;
-    buildMultiselect(el, key, opts, null);
-  });
+  function optionsForKey(key) {
+    if (key === "industry") return industries;
+    if (key === "size") return sizes;
+    if (key === "country") return countries;
+    if (key === "category") return categoryListSorted;
+    return currentResearchOptions();
+  }
+  function buildAllMultiselects() {
+    document.querySelectorAll(".multiselect").forEach(function (el) {
+      buildMultiselect(el, el.dataset.key, optionsForKey(el.dataset.key));
+    });
+  }
+  buildAllMultiselects();
 
   document.getElementById("searchInput").addEventListener("input", function (e) {
     state.search = e.target.value.trim().toLowerCase();
@@ -799,6 +1109,11 @@
   });
   document.getElementById("icpToggle").addEventListener("change", function (e) {
     state.icpOnly = e.target.checked;
+    state.page = 1;
+    render();
+  });
+  document.getElementById("leadsToggle").addEventListener("change", function (e) {
+    state.leadsOnly = e.target.checked;
     state.page = 1;
     render();
   });
@@ -815,10 +1130,11 @@
   });
   document.getElementById("resetFilters").addEventListener("click", function () {
     state.search = ""; state.industry.clear(); state.size.clear(); state.competitor.clear(); state.category.clear(); state.country.clear();
-    state.icpOnly = true; state.newOnly = false; state.minScore = 0; state.page = 1;
+    state.icpOnly = true; state.newOnly = false; state.leadsOnly = false; state.minScore = 0; state.page = 1;
     document.getElementById("searchInput").value = "";
     document.getElementById("icpToggle").checked = true;
     document.getElementById("newToggle").checked = false;
+    document.getElementById("leadsToggle").checked = false;
     document.getElementById("scoreSlider").value = 0;
     document.getElementById("scoreSliderValue").textContent = "0";
     document.querySelectorAll(".multiselect input[type=checkbox]").forEach(function (cb) { cb.checked = false; });
@@ -835,6 +1151,15 @@
   });
   document.getElementById("prevPage").addEventListener("click", function () { if (state.page > 1) { state.page--; render(); } });
   document.getElementById("nextPage").addEventListener("click", function () { state.page++; render(); });
+  document.getElementById("acctTbody").addEventListener("click", function (e) {
+    var row = e.target.closest("tr[data-account]");
+    if (row) { row.focus(); openAccountDetail(row.dataset.account); }
+  });
+  document.getElementById("acctTbody").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var row = e.target.closest("tr[data-account]");
+    if (row) { e.preventDefault(); openAccountDetail(row.dataset.account); }
+  });
   document.getElementById("toggleBarTable").addEventListener("click", function () {
     var wrap = document.getElementById("barTableWrap");
     var showing = wrap.style.display !== "none";
@@ -843,15 +1168,39 @@
   });
 
   // ---------- CSV download ----------
+  // Two hosting contexts need different strategies:
+  // - Inside a Claude artifact viewer, plain <a download>/blob saves are
+  //   inert (sandboxed), so a file save has to go through window.claude's
+  //   "downloads" capability, with a clipboard-copy fallback if that's
+  //   unavailable in the current view.
+  // - On a normal site (e.g. this page hosted on Vercel), window.claude
+  //   doesn't exist at all, and an ordinary browser download works fine —
+  //   so that's tried directly, no capability bridge involved.
+  var hasClaudeBridge = !!(window.claude && typeof window.claude.use === "function");
   var downloadsApi = null;
   var downloadsChecked = false;
-  if (window.claude && typeof window.claude.use === "function") {
+  if (hasClaudeBridge) {
     window.claude.use("downloads").then(function (api) {
       downloadsApi = api;
       downloadsChecked = true;
     }).catch(function () { downloadsChecked = true; });
   } else {
     downloadsChecked = true;
+  }
+
+  function triggerNativeDownload(filename, text) {
+    try {
+      var blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      return true;
+    } catch (e) { return false; }
   }
 
   function setDownloadStatus(msg) {
@@ -870,7 +1219,7 @@
       "Account Annual Revenue", "Account Size", "Account Industry",
       "Revenue Band", "Country", "ICP Fit", "Intent Score", "Activity Count",
       "Unica Activity Count", "Trend vs Prior " + currentRangeDays + "d", "Activity Labels",
-      "Competitors Researched", "Categories Researched"
+      "Competitors Researched", "Categories Researched", "Leads Sourced"
     ];
     var lines = [headers.join(",")];
     list.forEach(function (a) {
@@ -897,7 +1246,8 @@
         csvEscape(a.trend),
         csvEscape((a.activityLabels || []).join(", ")),
         csvEscape(competitorsStr),
-        csvEscape(categoriesStr)
+        csvEscape(categoriesStr),
+        csvEscape(a.leadCount || 0)
       ].join(","));
     });
     return lines.join("\r\n");
@@ -937,6 +1287,10 @@
 
     function attemptSave(filename, data) {
       if (!downloadsApi) {
+        if (!hasClaudeBridge && triggerNativeDownload(filename, data)) {
+          setDownloadStatus("Saved " + filename + " (" + list.length + " accounts).");
+          return;
+        }
         copyCsvFallback(data, list.length);
         return;
       }
@@ -960,6 +1314,7 @@
     return accounts.filter(function (a) {
       if (state.icpOnly && !a.icpFit) return false;
       if (state.newOnly && !a.isNewInRange) return false;
+      if (state.leadsOnly && !a.leadCount) return false;
       if (state.minScore > 0 && a.intentScore < state.minScore) return false;
       if (state.search && !(a.account.toLowerCase().indexOf(state.search) > -1 || (a.domain || "").toLowerCase().indexOf(state.search) > -1)) return false;
       if (state.industry.size && !state.industry.has(a.industry)) return false;
@@ -968,7 +1323,7 @@
       if (state.competitor.size) {
         var keys = Object.keys(a.competitors || {});
         var hit = keys.some(function (k) { return state.competitor.has(k); });
-        if (!hit && state.competitor.has(UNICA_LABEL) && a.unicaCount > 0) hit = true;
+        if (!hit && state.competitor.has(ownBucketName()) && a.unicaCount > 0) hit = true;
         if (!hit) return false;
       }
       if (state.category.size) {
@@ -1051,8 +1406,8 @@
         .map(function (k) { return '<span class="chip">' + esc(k) + ' <b>' + a.competitors[k] + '</b></span>'; }).join("");
       if (a.unicaCount > 0) chips = '<span class="chip unica">HCL Unica <b>' + a.unicaCount + '</b></span>' + chips;
       if (!chips) chips = '<span class="chip">—</span>';
-      return "<tr>" +
-        '<td><div class="acct-name">' + esc(a.account) + (a.icpFit ? ' <span class="pill pill-icp">ICP</span>' : '') + '</div><div class="acct-domain">' + esc(a.domain || "") + "</div></td>" +
+      return '<tr tabindex="0" role="button" aria-label="View intent history for ' + esc(a.account) + '" data-account="' + esc(a.account) + '">' +
+        '<td><div class="acct-name">' + esc(a.account) + (a.icpFit ? ' <span class="pill pill-icp">ICP</span>' : '') + (a.leadCount ? ' <span class="pill pill-lead">' + a.leadCount + (a.leadCount === 1 ? ' lead' : ' leads') + '</span>' : '') + '</div><div class="acct-domain">' + esc(a.domain || "") + "</div></td>" +
         "<td>" + esc(a.industry) + "</td>" +
         "<td>" + esc(a.size) + "</td>" +
         '<td class="num score-cell">' + a.intentScore.toFixed(1) + "</td>" +
@@ -1079,14 +1434,15 @@
   }
 
   function renderBars(list) {
+    var ownName = ownBucketName();
     var totals = {};
-    competitorBuckets.forEach(function (b) { totals[b] = 0; });
+    currentCompetitorBuckets().forEach(function (b) { totals[b] = 0; });
     var unicaTotal = 0;
     list.forEach(function (a) {
       unicaTotal += a.unicaCount > 0 ? 1 : 0;
       Object.keys(a.competitors || {}).forEach(function (k) { totals[k] = (totals[k] || 0) + 1; });
     });
-    var entries = [["HCL Unica (Own)", unicaTotal]].concat(
+    var entries = [[ownName, unicaTotal]].concat(
       Object.keys(totals).map(function (k) { return [k, totals[k]]; })
     ).filter(function (e) { return e[1] > 0; }).sort(function (a, b) { return b[1] - a[1]; });
 
@@ -1096,7 +1452,7 @@
       barList.innerHTML = '<div class="empty-state" style="padding:16px 0;">No product research in this filtered set.</div>';
     } else {
       barList.innerHTML = entries.map(function (e) {
-        var isOwn = e[0] === "HCL Unica (Own)";
+        var isOwn = e[0] === ownName;
         var pct = Math.max(2, Math.round((e[1] / max) * 100));
         return '<div class="bar-row">' +
           '<span class="bar-label' + (isOwn ? ' own' : '') + '">' + esc(e[0]) + '</span>' +
@@ -1111,17 +1467,18 @@
   }
 
   function renderHeatmap(list) {
+    var buckets = currentCompetitorBuckets();
     var industriesInView = Array.from(new Set(list.map(function (a) { return a.industry; }).filter(Boolean))).sort();
     var matrix = {};
-    industriesInView.forEach(function (ind) { matrix[ind] = {}; competitorBuckets.forEach(function (b) { matrix[ind][b] = 0; }); });
+    industriesInView.forEach(function (ind) { matrix[ind] = {}; buckets.forEach(function (b) { matrix[ind][b] = 0; }); });
     var colTotals = {};
-    competitorBuckets.forEach(function (b) { colTotals[b] = 0; });
+    buckets.forEach(function (b) { colTotals[b] = 0; });
     list.forEach(function (a) {
       Object.keys(a.competitors || {}).forEach(function (k) {
         if (matrix[a.industry] && k in matrix[a.industry]) { matrix[a.industry][k]++; colTotals[k]++; }
       });
     });
-    var activeCols = competitorBuckets.filter(function (b) { return colTotals[b] > 0; });
+    var activeCols = buckets.filter(function (b) { return colTotals[b] > 0; });
     var maxVal = 1;
     industriesInView.forEach(function (ind) { activeCols.forEach(function (b) { maxVal = Math.max(maxVal, matrix[ind][b]); }); });
 
@@ -1145,6 +1502,341 @@
     });
     html += "</tbody></table>";
     wrap.innerHTML = html;
+  }
+
+  // ---------- settings modal ----------
+  var allIndustries = industries; // same list used by the Industry filter
+  var settingsOverlay = document.getElementById("settingsOverlay");
+  var draftConfig = null;
+
+  document.getElementById("vendorDatalist").innerHTML =
+    payload.vendorList.map(function (v) { return "<option value=\"" + esc(v) + "\">"; }).join("");
+
+  function openSettings() {
+    draftConfig = cloneConfig(activeConfig);
+    renderIcpPane();
+    renderRulesPane();
+    renderSignalsPane();
+    settingsOverlay.style.display = "flex";
+  }
+  function closeSettings() {
+    settingsOverlay.style.display = "none";
+    draftConfig = null;
+  }
+  document.getElementById("settingsToggle").addEventListener("click", openSettings);
+  document.getElementById("settingsClose").addEventListener("click", closeSettings);
+  document.getElementById("settingsCancel").addEventListener("click", closeSettings);
+  settingsOverlay.addEventListener("click", function (e) { if (e.target === settingsOverlay) closeSettings(); });
+
+  document.querySelectorAll(".modal-tab").forEach(function (tab) {
+    tab.addEventListener("click", function () {
+      document.querySelectorAll(".modal-tab").forEach(function (t) { t.classList.toggle("active", t === tab); });
+      document.querySelectorAll(".modal-pane").forEach(function (p) { p.style.display = p.dataset.pane === tab.dataset.tab ? "block" : "none"; });
+    });
+  });
+
+  function renderIcpPane() {
+    var box = document.getElementById("icpIndustryChecklist");
+    box.innerHTML = allIndustries.map(function (ind) {
+      var checked = draftConfig.icpIndustries.indexOf(ind) > -1 ? " checked" : "";
+      return '<label><input type="checkbox" value="' + esc(ind) + '"' + checked + ' /> ' + esc(ind) + "</label>";
+    }).join("");
+    document.getElementById("icpMinEmployees").value = draftConfig.minEmployees;
+    document.getElementById("icpMinRevenue").value = draftConfig.minRevenue;
+  }
+
+  // Any in-progress edits in the rule rows live only in the DOM until this
+  // runs — call it before mutating draftConfig.rules and re-rendering
+  // (add/remove), or the re-render would wipe unsaved edits in other rows.
+  function syncRulesFromForm() {
+    document.querySelectorAll("#rulesEditor .rule-row").forEach(function (row) {
+      var idx = Number(row.dataset.idx);
+      var rule = draftConfig.rules[idx];
+      if (!rule) return;
+      var productsRaw = row.querySelector(".rule-products").value.trim();
+      rule.bucket = row.querySelector(".rule-bucket").value.trim() || rule.bucket;
+      rule.vendor = row.querySelector(".rule-vendor").value.trim();
+      rule.products = productsRaw ? productsRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : null;
+      rule.own = row.querySelector(".rule-own input").checked;
+    });
+  }
+
+  function renderRulesPane() {
+    var box = document.getElementById("rulesEditor");
+    box.innerHTML = '<div class="rule-head"><span>Bucket name</span><span>Vendor</span><span>Products (blank = any)</span></div>';
+    draftConfig.rules.forEach(function (rule, idx) {
+      var row = document.createElement("div");
+      row.className = "rule-row";
+      row.dataset.idx = idx;
+      row.innerHTML =
+        '<input type="text" class="rule-bucket" value="' + esc(rule.bucket) + '" />' +
+        '<input type="text" class="rule-vendor" list="vendorDatalist" value="' + esc(rule.vendor) + '" />' +
+        '<input type="text" class="rule-products" value="' + esc(rule.products ? rule.products.join(", ") : "") + '" />' +
+        '<label class="rule-own"><input type="radio" name="ownRule" ' + (rule.own ? "checked" : "") + ' /> Own</label>' +
+        '<button type="button" class="rule-remove" aria-label="Remove">&times;</button>';
+      box.appendChild(row);
+      row.querySelector(".rule-own input").addEventListener("change", function () {
+        draftConfig.rules.forEach(function (r) { r.own = false; });
+        draftConfig.rules[idx].own = true;
+      });
+      row.querySelector(".rule-remove").addEventListener("click", function () {
+        syncRulesFromForm();
+        draftConfig.rules.splice(idx, 1);
+        renderRulesPane();
+      });
+    });
+  }
+  document.getElementById("addRuleBtn").addEventListener("click", function () {
+    syncRulesFromForm();
+    draftConfig.rules.push({ bucket: "New competitor", vendor: "", products: null, own: false });
+    renderRulesPane();
+  });
+
+  function renderSignalsPane() {
+    var box = document.getElementById("labelWeightsEditor");
+    box.innerHTML = "<label>Activity label weights</label>" + payload.labelList.map(function (label) {
+      var w = draftConfig.labelWeights[label];
+      if (w === undefined) w = draftConfig.defaultLabelWeight;
+      return '<div class="label-weight-row"><span>' + esc(label) + '</span><input type="number" step="0.5" min="0" data-label="' + esc(label) + '" value="' + w + '" /></div>';
+    }).join("");
+    document.getElementById("ownMultInput").value = draftConfig.ownMultiplier;
+    document.getElementById("compMultInput").value = draftConfig.competitorMultiplier;
+  }
+
+  document.getElementById("settingsReset").addEventListener("click", function () {
+    draftConfig = defaultConfig();
+    renderIcpPane();
+    renderRulesPane();
+    renderSignalsPane();
+  });
+
+  function readDraftFromForm() {
+    draftConfig.icpIndustries = Array.from(document.querySelectorAll("#icpIndustryChecklist input:checked")).map(function (cb) { return cb.value; });
+    draftConfig.minEmployees = Number(document.getElementById("icpMinEmployees").value) || 0;
+    draftConfig.minRevenue = Number(document.getElementById("icpMinRevenue").value) || 0;
+
+    var rows = document.querySelectorAll("#rulesEditor .rule-row");
+    draftConfig.rules = Array.from(rows).map(function (row) {
+      var productsRaw = row.querySelector(".rule-products").value.trim();
+      var products = productsRaw ? productsRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : null;
+      return {
+        bucket: row.querySelector(".rule-bucket").value.trim() || "Untitled",
+        vendor: row.querySelector(".rule-vendor").value.trim(),
+        products: products,
+        own: row.querySelector(".rule-own input").checked
+      };
+    }).filter(function (r) { return r.vendor; });
+
+    document.querySelectorAll("#labelWeightsEditor input[data-label]").forEach(function (input) {
+      draftConfig.labelWeights[input.dataset.label] = Number(input.value) || 0;
+    });
+    draftConfig.ownMultiplier = Number(document.getElementById("ownMultInput").value) || 0;
+    draftConfig.competitorMultiplier = Number(document.getElementById("compMultInput").value) || 0;
+  }
+
+  document.getElementById("settingsSave").addEventListener("click", function () {
+    readDraftFromForm();
+    var ownCount = draftConfig.rules.filter(function (r) { return r.own; }).length;
+    if (draftConfig.rules.length && ownCount !== 1) {
+      alert("Mark exactly one competitor row as \"Own\" before saving.");
+      return;
+    }
+    if (!draftConfig.icpIndustries.length) {
+      alert("Select at least one target industry before saving.");
+      return;
+    }
+    activeConfig = draftConfig;
+    saveStoredConfig(activeConfig);
+    compileRules();
+    state.competitor.clear();
+    var competitorEl = document.querySelector('.multiselect[data-key="competitor"]');
+    buildMultiselect(competitorEl, "competitor", currentResearchOptions());
+    updateMultiselectLabel(competitorEl, "competitor");
+    closeSettings();
+    render();
+  });
+
+  // ---------- account detail (intent score over time) ----------
+  var acctDetailOverlay = document.getElementById("acctDetailOverlay");
+  var lastFocusedRow = null;
+
+  function closeAccountDetail() {
+    acctDetailOverlay.style.display = "none";
+    if (lastFocusedRow && document.body.contains(lastFocusedRow)) lastFocusedRow.focus();
+  }
+  document.getElementById("acctDetailClose").addEventListener("click", closeAccountDetail);
+  acctDetailOverlay.addEventListener("click", function (e) { if (e.target === acctDetailOverlay) closeAccountDetail(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && acctDetailOverlay.style.display !== "none") closeAccountDetail();
+  });
+  document.getElementById("toggleAcctTable").addEventListener("click", function () {
+    var wrap = document.getElementById("acctWeeklyTableWrap");
+    var showing = wrap.style.display !== "none";
+    wrap.style.display = showing ? "none" : "block";
+    this.textContent = showing ? "View as table" : "Hide table";
+  });
+
+  // Non-overlapping 7-day buckets walking back from the most recent data,
+  // so bucket edges line up with the weekly TrustRadius export cadence.
+  function weeklyBuckets() {
+    var buckets = [];
+    var cursor = dataEndMs;
+    while (cursor >= dataStartMs) {
+      var start = Math.max(cursor - 6 * DAY_MS, dataStartMs);
+      buckets.unshift({ start: start, end: cursor });
+      cursor -= 7 * DAY_MS;
+    }
+    return buckets;
+  }
+
+  function openAccountDetail(accountName) {
+    var idx = accountIndexByName[accountName];
+    if (idx === undefined) return;
+    lastFocusedRow = document.activeElement;
+    var meta = accountMeta[idx];
+    var events = eventsByAccount[idx];
+
+    document.getElementById("acctDetailTitle").textContent = meta.account;
+    document.getElementById("acctDetailDomain").textContent = meta.domain || "";
+
+    var icpFit = computeIcpFit(meta);
+    var metaItems = [
+      ["Industry", meta.industry], ["Size", meta.size],
+      ["Revenue band", meta.revenueBand], ["Country", meta.country],
+      ["ICP fit", icpFit ? "Yes" : "No"],
+      ["First activity", isoDate(firstActivityMs[idx])], ["Last activity", isoDate(lastActivityMs[idx])]
+    ];
+    document.getElementById("acctMetaRow").innerHTML = metaItems.map(function (p) {
+      return '<div class="acct-meta-item"><span class="meta-label">' + esc(p[0]) + '</span><span class="meta-value">' + esc(p[1] || "—") + "</span></div>";
+    }).join("");
+
+    var points = weeklyBuckets().map(function (b) {
+      var s = summarizeAccount(events, b.start, b.end);
+      return { label: isoDate(b.end), score: s.score, count: s.count };
+    });
+    document.getElementById("acctChartHint").textContent = points.length + " weeks · " + payload.dataStart + " → " + payload.dataEnd;
+    renderScoreChart(document.getElementById("acctChartWrap"), points);
+
+    document.querySelector("#acctWeeklyTable tbody").innerHTML = points.slice().reverse().map(function (p) {
+      return "<tr><td>" + esc(p.label) + '</td><td class="num">' + p.score.toFixed(1) + '</td><td class="num">' + p.count + "</td></tr>";
+    }).join("");
+    document.getElementById("acctWeeklyTableWrap").style.display = "none";
+    document.getElementById("toggleAcctTable").textContent = "View as table";
+
+    renderAccountLeads(meta);
+
+    acctDetailOverlay.style.display = "flex";
+  }
+
+  function safeHref(url) {
+    var u = String(url || "").trim();
+    if (!u) return "";
+    if (/^https?:\/\//i.test(u)) return u;
+    if (/^(www\.)?linkedin\.com\//i.test(u)) return "https://" + u;
+    return "";
+  }
+
+  function timeframePill(tf) {
+    var cls = tf === "0-3 months" ? "pill-hot" : tf === "3-6 months" ? "pill-warm" : "pill-cool";
+    return '<span class="pill ' + cls + '">' + esc(tf || "n/a") + "</span>";
+  }
+
+  function renderAccountLeads(meta) {
+    var countEl = document.getElementById("acctLeadsCount");
+    var listEl = document.getElementById("acctLeadsList");
+    if (!payload.leadsIncluded) {
+      countEl.textContent = "";
+      listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;">Lead details contain personal contact data and are only shown in the private version of this dashboard.</div>';
+      return;
+    }
+    var leads = meta.leads || [];
+    countEl.textContent = leads.length ? "(" + leads.length + ")" : "";
+    if (!leads.length) {
+      listEl.innerHTML = '<div class="empty-state" style="padding:12px 0;">No leads delivered for this account yet.</div>';
+      return;
+    }
+    listEl.innerHTML = leads.map(function (l) {
+      var li = safeHref(l.linkedin);
+      var phones = [l.phone ? "Phone " + esc(l.phone) : "", l.direct ? "Direct " + esc(l.direct) : ""].filter(Boolean).join(" · ");
+      return '<div class="lead-card">' +
+        '<div class="lead-top"><div><span class="lead-name">' + esc(l.first + " " + l.last) + '</span> <span class="lead-title">' + esc(l.title) + "</span></div>" +
+        timeframePill(l.timeframe) + "</div>" +
+        '<div class="lead-meta">' +
+        '<span><a href="mailto:' + esc(l.email) + '">' + esc(l.email) + "</a></span>" +
+        (phones ? "<span>" + phones + "</span>" : "") +
+        (li ? '<span><a href="' + esc(li) + '" target="_blank" rel="noopener noreferrer">LinkedIn</a></span>' : "") +
+        "<span>Delivered " + esc(l.date) + "</span></div>" +
+        (l.asset ? '<div class="lead-asset">Downloaded: ' + esc(l.asset) + "</div>" : "") +
+        "</div>";
+    }).join("");
+  }
+
+  function renderScoreChart(container, points) {
+    if (!points.length) { container.innerHTML = '<div class="empty-state">No history to chart.</div>'; return; }
+    var W = 640, H = 220, padL = 40, padR = 12, padT = 14, padB = 24;
+    var plotW = W - padL - padR, plotH = H - padT - padB;
+    var maxScore = points.reduce(function (m, p) { return Math.max(m, p.score); }, 0) || 1;
+    var niceMax = maxScore * 1.15;
+
+    function xAt(i) { return points.length === 1 ? padL + plotW / 2 : padL + (i / (points.length - 1)) * plotW; }
+    function yAt(v) { return padT + plotH - (v / niceMax) * plotH; }
+
+    var linePts = points.map(function (p, i) { return xAt(i) + "," + yAt(p.score); }).join(" ");
+    var areaPts = linePts + " " + xAt(points.length - 1) + "," + (padT + plotH) + " " + xAt(0) + "," + (padT + plotH);
+
+    var gridLines = "";
+    var ticks = 4;
+    for (var g = 0; g <= ticks; g++) {
+      var v = (niceMax / ticks) * g;
+      var y = yAt(v);
+      gridLines += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="var(--border)" stroke-width="1" />';
+      gridLines += '<text x="' + (padL - 6) + '" y="' + (y + 3) + '" text-anchor="end" font-size="9" fill="var(--text-muted)">' + Math.round(v) + "</text>";
+    }
+
+    var tickIdxs = points.length <= 6 ? points.map(function (_, i) { return i; }) : [0, Math.round((points.length - 1) * 0.33), Math.round((points.length - 1) * 0.66), points.length - 1];
+    var xLabels = tickIdxs.map(function (i) {
+      return '<text x="' + xAt(i) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="9" fill="var(--text-muted)">' + esc(points[i].label) + "</text>";
+    }).join("");
+
+    var lastIdx = points.length - 1;
+    var dots = points.map(function (p, i) {
+      return '<circle class="score-dot" data-i="' + i + '" cx="' + xAt(i) + '" cy="' + yAt(p.score) + '" r="' + (i === lastIdx ? 4 : 3) + '" fill="var(--accent)" stroke="var(--surface)" stroke-width="1.5" />';
+    }).join("");
+
+    var lastLabel = '<text x="' + xAt(lastIdx) + '" y="' + (yAt(points[lastIdx].score) - 10) + '" text-anchor="end" font-size="10" font-weight="700" fill="var(--accent)">' + points[lastIdx].score.toFixed(1) + "</text>";
+
+    container.innerHTML =
+      '<div class="chart-svg-wrap">' +
+      '<svg viewBox="0 0 ' + W + " " + H + '" width="100%" role="img" aria-label="Weekly intent score trend">' +
+      '<polygon points="' + areaPts + '" fill="var(--ramp-1)" opacity="0.7" />' +
+      gridLines +
+      '<polyline points="' + linePts + '" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />' +
+      dots + lastLabel + xLabels +
+      "</svg>" +
+      '<div class="chart-tooltip" id="acctChartTooltip"><div class="tt-date"></div><div class="tt-value"></div></div>' +
+      "</div>";
+
+    var svg = container.querySelector("svg");
+    var tooltip = container.querySelector("#acctChartTooltip");
+    container.querySelectorAll(".score-dot").forEach(function (dot) {
+      var i = Number(dot.dataset.i);
+      dot.addEventListener("mouseenter", function () { showTip(i); });
+      dot.addEventListener("focus", function () { showTip(i); });
+      dot.addEventListener("mouseleave", hideTip);
+      dot.addEventListener("blur", hideTip);
+    });
+    function showTip(i) {
+      var p = points[i];
+      tooltip.querySelector(".tt-date").textContent = p.label;
+      tooltip.querySelector(".tt-value").innerHTML = "<b>" + p.score.toFixed(1) + "</b> score · " + p.count + " activity";
+      var rect = svg.getBoundingClientRect();
+      var containerRect = container.getBoundingClientRect();
+      var xFrac = xAt(i) / W, yFrac = yAt(points[i].score) / H;
+      tooltip.style.left = (rect.left - containerRect.left + rect.width * xFrac) + "px";
+      tooltip.style.top = (rect.top - containerRect.top + rect.height * yFrac) + "px";
+      tooltip.style.display = "block";
+    }
+    function hideTip() { tooltip.style.display = "none"; }
   }
 
   render();

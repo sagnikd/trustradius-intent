@@ -2,6 +2,9 @@
 master_activity.csv
 dashboard.xlsx
 dashboard_data.json
+dashboard_data_public.json
+master_leads.csv
+*Lead_List*.xlsx
 intent-radar.html
 ~$*.xlsx
 
@@ -11,3 +14,6 @@ __pycache__/
 
 # Local tooling config
 .claude/
+
+# Built deploy output (embeds account-level intent data)
+deploy/
