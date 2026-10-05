@@ -62,6 +62,32 @@ def merge_new_files(new_paths):
     return merged
 
 
+# Raw delivery workbooks (one sheet per delivery, TrustRadius-style headers)
+# differ from the master list's schema; map them onto it.
+LEAD_ALT_COLUMNS = {
+    "Business Card Title": "Job Title",
+    "Firm Description": "Industry",
+    "asset_downloaded": "Asset Downloaded",
+    "What is your buying timeframe?": "Buying Timeframe",
+    "LinkedIn Profile": "LinkedIn",
+}
+
+
+def _read_lead_workbook(path):
+    xl = pd.ExcelFile(path)
+    if "All Leads" in xl.sheet_names:
+        return xl.parse("All Leads")
+    df = xl.parse(xl.sheet_names[0]).rename(columns=LEAD_ALT_COLUMNS)
+    if "Delivery Date" not in df.columns:
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", Path(path).name)
+        if not m:
+            raise SystemExit(f"{Path(path).name}: no Delivery Date column and no YYYY-MM-DD in the filename.")
+        df["Delivery Date"] = m.group(1)
+    if "Phone" not in df.columns:
+        df["Phone"] = ""
+    return df
+
+
 def _clean_lead_frame(df):
     """Normalize one 'All Leads' sheet to LEAD_COLUMNS as clean strings."""
     missing = [c for c in LEAD_COLUMNS if c not in df.columns]
@@ -100,7 +126,7 @@ def merge_new_leads(xlsx_paths):
     before_rows = sum(len(f) for f in frames)
 
     for p in xlsx_paths:
-        frames.append(_clean_lead_frame(pd.read_excel(p, sheet_name="All Leads")))
+        frames.append(_clean_lead_frame(_read_lead_workbook(p)))
 
     merged = pd.concat(frames, ignore_index=True)
     merged = merged.drop_duplicates(subset=LEAD_KEY, keep="last")
