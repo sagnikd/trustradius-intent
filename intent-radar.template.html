@@ -668,7 +668,7 @@
   var firstActivityMs = new Array(accountMeta.length).fill(null);
   var lastActivityMs = new Array(accountMeta.length).fill(null);
   payload.events.forEach(function (ev) {
-    var acctIdx = ev[0], ms = Date.parse(ev[1]), vendorIdx = ev[2], productIdx = ev[3], catIdx = ev[4], labelIdx = ev[5];
+    var acctIdx = ev[0], ms = dataStartMs + ev[1] * DAY_MS, vendorIdx = ev[2], productIdx = ev[3], catIdx = ev[4], labelIdx = ev[5];
     eventsByAccount[acctIdx].push({ ms: ms, vendorIdx: vendorIdx, productIdx: productIdx, catIdx: catIdx, labelIdx: labelIdx });
     if (firstActivityMs[acctIdx] === null || ms < firstActivityMs[acctIdx]) firstActivityMs[acctIdx] = ms;
     if (lastActivityMs[acctIdx] === null || ms > lastActivityMs[acctIdx]) lastActivityMs[acctIdx] = ms;

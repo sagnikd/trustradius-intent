@@ -527,12 +527,14 @@ def main():
     label_list = sorted(set(event_exploded["Activity Label"]))
     label_index = {l: i for i, l in enumerate(label_list)}
 
+    # Event dates ship as day offsets from dataStart (smaller than ISO strings).
+    data_start = merged["Activity Date"].min()
     events = []
     for _, r in event_exploded.iterrows():
         category = r["Category"]
         events.append([
             account_index[r["Account Name"]],
-            r["Activity Date"].date().isoformat(),
+            (r["Activity Date"] - data_start).days,
             vendor_index[r["Vendor"]],
             product_index[r["Product"]],
             category_index.get(category, -1) if category else -1,
@@ -579,14 +581,14 @@ def main():
     for idx, lead_list in attached_leads.items():
         account_records[idx]["leadCount"] = len(lead_list)
     # Public variant: no individual-level lead data at all.
-    JSON_PUBLIC_OUTPUT_PATH.write_text(json.dumps(payload, default=str))
+    JSON_PUBLIC_OUTPUT_PATH.write_text(json.dumps(payload, default=str, separators=(",", ":")))
 
     # Private variant: leads embedded per account (names/emails/phones — PII).
     for idx, lead_list in attached_leads.items():
         account_records[idx] = {**account_records[idx], "leads": lead_list}
     payload["accounts"] = account_records
     payload["leadsIncluded"] = True
-    JSON_OUTPUT_PATH.write_text(json.dumps(payload, default=str))
+    JSON_OUTPUT_PATH.write_text(json.dumps(payload, default=str, separators=(",", ":")))
 
     print(f"Wrote {OUTPUT_PATH.name}: {len(priority)} ICP-fit accounts, "
           f"window {window_start.date()}..{window_end.date()}, "
