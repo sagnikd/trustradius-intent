@@ -650,11 +650,39 @@
   </div>
 </div>
 
-<script id="dashboard-data" type="application/json">__DASHBOARD_DATA__</script>
+<script id="dashboard-data" type="text/plain" data-encoding="gzip-base64">__DASHBOARD_DATA__</script>
 <script>
-(function () {
+(async function () {
   "use strict";
-  var payload = JSON.parse(document.getElementById("dashboard-data").textContent);
+
+  // The data payload is gzip+base64 so the page stays small; unpack it first.
+  async function loadPayload() {
+    var el = document.getElementById("dashboard-data");
+    var text = el.textContent.trim();
+    if (text.charAt(0) === "{") return JSON.parse(text);
+    if (typeof DecompressionStream === "undefined") {
+      throw new Error("This browser can't unpack the dashboard data (DecompressionStream is unavailable). Use a current Chrome, Edge, Safari or Firefox.");
+    }
+    var bin = atob(text);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    var ds = new DecompressionStream("gzip");
+    var writer = ds.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    var reader = ds.readable.getReader();
+    var decoder = new TextDecoder();
+    var out = "";
+    for (;;) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      out += decoder.decode(chunk.value, { stream: true });
+    }
+    out += decoder.decode();
+    return JSON.parse(out);
+  }
+
+  var payload = await loadPayload();
   var accountMeta = payload.accounts;
   var accounts = []; // recomputed for the selected date range — see computeAccountsForRange()
   var DAY_MS = 86400000;
@@ -1841,5 +1869,9 @@
   }
 
   render();
-})();
+})().catch(function (err) {
+  console.error(err);
+  var hero = document.getElementById("heroWindow");
+  if (hero) hero.textContent = "Couldn't load the dashboard: " + (err && err.message ? err.message : err);
+});
 </script>

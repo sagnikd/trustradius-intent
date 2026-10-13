@@ -28,6 +28,9 @@ JSON_OUTPUT_PATH = BASE_DIR / "dashboard_data.json"
 # hosts that aren't access-controlled (e.g. the Vercel deploy).
 JSON_PUBLIC_OUTPUT_PATH = BASE_DIR / "dashboard_data_public.json"
 LEADS_MASTER_PATH = BASE_DIR / "master_leads.csv"
+TEMPLATE_PATH = BASE_DIR / "intent-radar.template.html"
+HTML_OUTPUT_PATH = BASE_DIR / "intent-radar.html"
+DEPLOY_HTML_PATH = BASE_DIR / "deploy" / "index.html"
 
 OBJECT_SLOTS = ["1", "2", "3"]
 LEAD_COLUMNS = [
@@ -348,6 +351,25 @@ def category_counts_window(exploded, window_start, window_end):
     return results
 
 
+def write_html_pages(payload_json):
+    """Embed the payload (gzip+base64, ~5x smaller) into the template.
+
+    Writes intent-radar.html (Claude Artifact, 16MB limit) and, if the deploy/
+    folder exists, deploy/index.html (Vercel).
+    """
+    import base64
+    import gzip
+
+    packed = base64.b64encode(gzip.compress(payload_json.encode("utf-8"), compresslevel=9, mtime=0)).decode("ascii")
+    page = TEMPLATE_PATH.read_text(encoding="utf-8").replace("__DASHBOARD_DATA__", packed)
+    targets = [HTML_OUTPUT_PATH] + ([DEPLOY_HTML_PATH] if DEPLOY_HTML_PATH.parent.exists() else [])
+    for path in targets:
+        path.write_text(page, encoding="utf-8")
+    size_mb = len(page.encode("utf-8")) / 1e6
+    print(f"Wrote {', '.join(str(t.relative_to(BASE_DIR)) for t in targets)}: {size_mb:.1f} MB (artifact limit 16 MB)")
+    return size_mb
+
+
 def main():
     csv_paths = [p for p in sys.argv[1:] if p.lower().endswith(".csv")]
     lead_paths = [p for p in sys.argv[1:] if p.lower().endswith((".xlsx", ".xlsm"))]
@@ -588,7 +610,9 @@ def main():
         account_records[idx] = {**account_records[idx], "leads": lead_list}
     payload["accounts"] = account_records
     payload["leadsIncluded"] = True
-    JSON_OUTPUT_PATH.write_text(json.dumps(payload, default=str, separators=(",", ":")))
+    private_json = json.dumps(payload, default=str, separators=(",", ":"))
+    JSON_OUTPUT_PATH.write_text(private_json)
+    write_html_pages(private_json)
 
     print(f"Wrote {OUTPUT_PATH.name}: {len(priority)} ICP-fit accounts, "
           f"window {window_start.date()}..{window_end.date()}, "
