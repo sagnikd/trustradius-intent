@@ -76,16 +76,49 @@ LEAD_ALT_COLUMNS = {
 }
 
 
+# CRM-style lead exports (CSV, e.g. "HCL_Unica Q4 2026_October162026_....csv").
+# Created Date is when the lead was created, not delivered, so the delivery
+# date comes from the filename instead.
+LEAD_CRM_COLUMNS = {
+    "Title": "Job Title",
+    "Company Name": "Company",
+    "Resource Downloaded": "Asset Downloaded",
+    "Work Phone": "Phone",
+    "Mobile Phone": "Direct Number",
+    "LinkedIn Profile": "LinkedIn",
+    "What is your buying timeframe?": "Buying Timeframe",
+}
+
+
+def is_lead_csv(path):
+    """Lead exports have person columns; TrustRadius activity exports have Activity ID."""
+    cols = set(pd.read_csv(path, nrows=0, encoding="utf-8-sig").columns)
+    return "Email Address" in cols and "First Name" in cols and "Activity ID" not in cols
+
+
+def _delivery_date_from_filename(name):
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", name)
+    if m:
+        return "-".join(m.groups())
+    # e.g. "October162026" = Oct 16, 2026
+    m = re.search(r"(January|February|March|April|May|June|July|August|September|October|November|December)(\d{1,2})(\d{4})", name)
+    if m:
+        return pd.to_datetime(f"{m.group(1)} {m.group(2)} {m.group(3)}").strftime("%Y-%m-%d")
+    raise SystemExit(f"{name}: no Delivery Date column, and no date (YYYY-MM-DD or MonthDDYYYY) in the filename.")
+
+
 def _read_lead_workbook(path):
+    if str(path).lower().endswith(".csv"):
+        df = pd.read_csv(path, encoding="utf-8-sig", dtype=str, keep_default_na=False)
+        df = df[df["Email Address"].str.strip() != ""].rename(columns=LEAD_CRM_COLUMNS)
+        df["Delivery Date"] = _delivery_date_from_filename(Path(path).name)
+        return df
     xl = pd.ExcelFile(path)
     if "All Leads" in xl.sheet_names:
         return xl.parse("All Leads")
     df = xl.parse(xl.sheet_names[0]).rename(columns=LEAD_ALT_COLUMNS)
     if "Delivery Date" not in df.columns:
-        m = re.search(r"(\d{4}-\d{2}-\d{2})", Path(path).name)
-        if not m:
-            raise SystemExit(f"{Path(path).name}: no Delivery Date column and no YYYY-MM-DD in the filename.")
-        df["Delivery Date"] = m.group(1)
+        df["Delivery Date"] = _delivery_date_from_filename(Path(path).name)
     if "Phone" not in df.columns:
         df["Phone"] = ""
     return df
@@ -371,8 +404,10 @@ def write_html_pages(payload_json):
 
 
 def main():
-    csv_paths = [p for p in sys.argv[1:] if p.lower().endswith(".csv")]
-    lead_paths = [p for p in sys.argv[1:] if p.lower().endswith((".xlsx", ".xlsm"))]
+    args = sys.argv[1:]
+    lead_csvs = [p for p in args if p.lower().endswith(".csv") and is_lead_csv(p)]
+    csv_paths = [p for p in args if p.lower().endswith(".csv") and p not in lead_csvs]
+    lead_paths = [p for p in args if p.lower().endswith((".xlsx", ".xlsm"))] + lead_csvs
     other = [p for p in sys.argv[1:] if p not in csv_paths and p not in lead_paths]
     if other:
         raise SystemExit(f"Unsupported file type (expected .csv activity export or .xlsx lead list): {other}")
