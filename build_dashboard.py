@@ -104,7 +104,20 @@ def _delivery_date_from_filename(name):
     m = re.search(r"(January|February|March|April|May|June|July|August|September|October|November|December)(\d{1,2})(\d{4})", name)
     if m:
         return pd.to_datetime(f"{m.group(1)} {m.group(2)} {m.group(3)}").strftime("%Y-%m-%d")
-    raise SystemExit(f"{name}: no Delivery Date column, and no date (YYYY-MM-DD or MonthDDYYYY) in the filename.")
+    # e.g. "31102026" = 31 Oct 2026 (DDMMYYYY) or "10312026" (MMDDYYYY); only
+    # accepted when exactly one reading is a real date.
+    for run in re.findall(r"(?<!\d)(\d{8})(?!\d)", name):
+        readings = set()
+        for fmt in ("%d%m%Y", "%m%d%Y"):
+            try:
+                readings.add(pd.to_datetime(run, format=fmt).strftime("%Y-%m-%d"))
+            except ValueError:
+                pass
+        if len(readings) == 1:
+            return readings.pop()
+        if len(readings) > 1:
+            raise SystemExit(f"{name}: '{run}' could be DDMMYYYY or MMDDYYYY; rename the file with YYYY-MM-DD.")
+    raise SystemExit(f"{name}: no Delivery Date column, and no date (YYYY-MM-DD, MonthDDYYYY or DDMMYYYY) in the filename.")
 
 
 def _read_lead_workbook(path):
